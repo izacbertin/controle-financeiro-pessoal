@@ -25,6 +25,13 @@ App.views.dashboard = (function () {
       </div>`;
   }
 
+  // Como statTile(), mas o valor é um placeholder que App.animate anima do
+  // último número mostrado até o novo (efeito "contador") depois do mount.
+  function statTileCountUp(label, countUp, opts) {
+    const span = `<span class="${countUp.wrapClass || ''}" data-countup="${countUp.chave}" data-value="${countUp.valor}" data-fmt="${countUp.fmt || 'currency'}"></span>`;
+    return statTile(label, span, opts);
+  }
+
   function render(container) {
     const ui = state.getUI();
     const mes = ui.dashboardMonth;
@@ -52,13 +59,15 @@ App.views.dashboard = (function () {
       </div>
 
       <section class="stat-grid">
-        ${statTile('Saldo do mês', `<span class="valor--${saldoSentido}">${utils.formatCurrency(resumo.saldo)}</span>`)}
-        ${statTile('Receita do mês', utils.formatCurrency(resumo.receita))}
-        ${statTile('Total gasto', utils.formatCurrency(resumo.totalAposDescontos), {
+        ${statTileCountUp('Saldo do mês', { chave: 'dashboard:saldo', valor: resumo.saldo, wrapClass: `valor--${saldoSentido}` })}
+        ${statTileCountUp('Receita do mês', { chave: 'dashboard:receita', valor: resumo.receita })}
+        ${statTileCountUp('Total gasto', { chave: 'dashboard:totalGasto', valor: resumo.totalAposDescontos }, {
           delta: `${utils.formatPercent(resumo.percentPago, 0)} pago`, deltaSentido: 'neutro',
         })}
-        ${statTile('Pago / Pendente', `${utils.formatCurrency(resumo.totalPago)} <span class="stat-tile__sep">/</span> ${utils.formatCurrency(resumo.totalPendente)}`)}
-        ${statTile('Renda comprometida', resumo.percentRendaComprometida == null ? '—' : utils.formatPercent(resumo.percentRendaComprometida, 0))}
+        ${statTile('Pago / Pendente', `<span data-countup="dashboard:pago" data-value="${resumo.totalPago}"></span> <span class="stat-tile__sep">/</span> <span data-countup="dashboard:pendente" data-value="${resumo.totalPendente}"></span>`)}
+        ${resumo.percentRendaComprometida == null
+          ? statTile('Renda comprometida', '—')
+          : statTileCountUp('Renda comprometida', { chave: 'dashboard:rendaComprometida', valor: resumo.percentRendaComprometida, fmt: 'percent' })}
         ${statTile('Vs. mês anterior', variacaoTexto === '—' ? '—' : utils.formatPercent(Math.abs(variacao), 1), {
           delta: variacao == null ? null : (variacao > 0 ? '▲ aumentou' : '▼ diminuiu'), deltaSentido: variacaoSentido,
         })}
@@ -111,6 +120,7 @@ App.views.dashboard = (function () {
       ],
     });
 
+    App.animate.wireCountUps(container);
     wireEvents(container);
   }
 

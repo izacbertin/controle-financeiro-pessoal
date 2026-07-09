@@ -43,14 +43,15 @@ App.views.consolidado = (function () {
       </div>
 
       <div class="stat-grid">
-        <div class="stat-tile"><div class="stat-tile__label">Receita</div><div class="stat-tile__value">${utils.formatCurrency(r.receita)}</div></div>
-        <div class="stat-tile"><div class="stat-tile__label">Despesas totais</div><div class="stat-tile__value">${utils.formatCurrency(r.despesasTotais)}</div></div>
-        <div class="stat-tile"><div class="stat-tile__label">Total após descontos</div><div class="stat-tile__value">${utils.formatCurrency(r.totalAposDescontos)}</div></div>
-        <div class="stat-tile"><div class="stat-tile__label">Total pago</div><div class="stat-tile__value">${utils.formatCurrency(r.totalPago)}</div></div>
-        <div class="stat-tile"><div class="stat-tile__label">% pago</div><div class="stat-tile__value">${utils.formatPercent(r.percentPago, 0)}</div></div>
-        <div class="stat-tile"><div class="stat-tile__label">Saldo</div><div class="stat-tile__value"><span class="valor--${r.saldo >= 0 ? 'positivo' : 'negativo'}">${utils.formatCurrency(r.saldo)}</span></div></div>
+        <div class="stat-tile"><div class="stat-tile__label">Receita</div><div class="stat-tile__value"><span data-countup="consolidado:receita" data-value="${r.receita}"></span></div></div>
+        <div class="stat-tile"><div class="stat-tile__label">Despesas totais</div><div class="stat-tile__value"><span data-countup="consolidado:despesasTotais" data-value="${r.despesasTotais}"></span></div></div>
+        <div class="stat-tile"><div class="stat-tile__label">Total após descontos</div><div class="stat-tile__value"><span data-countup="consolidado:totalAposDescontos" data-value="${r.totalAposDescontos}"></span></div></div>
+        <div class="stat-tile"><div class="stat-tile__label">Total pago</div><div class="stat-tile__value"><span data-countup="consolidado:totalPago" data-value="${r.totalPago}"></span></div></div>
+        <div class="stat-tile"><div class="stat-tile__label">% pago</div><div class="stat-tile__value"><span data-countup="consolidado:percentPago" data-value="${r.percentPago}" data-fmt="percent"></span></div></div>
+        <div class="stat-tile"><div class="stat-tile__label">Saldo</div><div class="stat-tile__value"><span class="valor--${r.saldo >= 0 ? 'positivo' : 'negativo'}" data-countup="consolidado:saldo" data-value="${r.saldo}"></span></div></div>
       </div>
     `;
+    App.animate.wireCountUps(container);
   }
 
   function renderAnual(container) {
@@ -69,12 +70,12 @@ App.views.consolidado = (function () {
       </div>
 
       <div class="stat-grid">
-        <div class="stat-tile"><div class="stat-tile__label">Receita anual</div><div class="stat-tile__value">${utils.formatCurrency(r.receitaAnual)}</div></div>
-        <div class="stat-tile"><div class="stat-tile__label">Despesa anual</div><div class="stat-tile__value">${utils.formatCurrency(r.despesaAnual)}</div></div>
-        <div class="stat-tile"><div class="stat-tile__label">% da renda comprometida</div><div class="stat-tile__value">${r.percentRendaComprometida == null ? '—' : utils.formatPercent(r.percentRendaComprometida, 0)}</div></div>
-        <div class="stat-tile"><div class="stat-tile__label">% pago no ano</div><div class="stat-tile__value">${utils.formatPercent(r.percentPago, 0)}</div></div>
+        <div class="stat-tile"><div class="stat-tile__label">Receita anual</div><div class="stat-tile__value"><span data-countup="consolidado:receitaAnual" data-value="${r.receitaAnual}"></span></div></div>
+        <div class="stat-tile"><div class="stat-tile__label">Despesa anual</div><div class="stat-tile__value"><span data-countup="consolidado:despesaAnual" data-value="${r.despesaAnual}"></span></div></div>
+        <div class="stat-tile"><div class="stat-tile__label">% da renda comprometida</div><div class="stat-tile__value">${r.percentRendaComprometida == null ? '—' : `<span data-countup="consolidado:percentRendaComprometida" data-value="${r.percentRendaComprometida}" data-fmt="percent"></span>`}</div></div>
+        <div class="stat-tile"><div class="stat-tile__label">% pago no ano</div><div class="stat-tile__value"><span data-countup="consolidado:percentPagoAno" data-value="${r.percentPago}" data-fmt="percent"></span></div></div>
         <div class="stat-tile"><div class="stat-tile__label">NFs emitidas</div><div class="stat-tile__value">${nfs.quantidade}</div></div>
-        <div class="stat-tile"><div class="stat-tile__label">Total faturado</div><div class="stat-tile__value">${utils.formatCurrency(nfs.total)}</div></div>
+        <div class="stat-tile"><div class="stat-tile__label">Total faturado</div><div class="stat-tile__value"><span data-countup="consolidado:totalFaturado" data-value="${nfs.total}"></span></div></div>
       </div>
 
       <div class="card">
@@ -98,6 +99,7 @@ App.views.consolidado = (function () {
         </div>
       </div>
     `;
+    App.animate.wireCountUps(container);
   }
 
   function wireEvents(container) {

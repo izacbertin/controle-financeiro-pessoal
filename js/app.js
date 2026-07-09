@@ -18,6 +18,7 @@
 
   const TEMA_CICLO = { sistema: 'claro', claro: 'escuro', escuro: 'sistema' };
   const TEMA_ICONE = { sistema: '◐', claro: '☀', escuro: '☾' };
+  let ultimaViewRenderizada = null;
   const TEMA_LABEL = { sistema: 'Automático', claro: 'Claro', escuro: 'Escuro' };
 
   function navHtml(activeView, extraClass) {
@@ -66,7 +67,19 @@
 
     const view = App.views[ui.view];
     const container = document.getElementById('view-container');
-    if (view) view.render(container);
+    const trocouDeTela = ui.view !== ultimaViewRenderizada;
+    ultimaViewRenderizada = ui.view;
+
+    const desenhar = () => { if (view) view.render(container); };
+
+    // A transição animada só entra ao trocar de tela (Painel -> Gastos etc.)
+    // — em qualquer outra atualização (filtro, novo lançamento, mudar o mês)
+    // o redesenho continua instantâneo, sem "flashar" a tela toda.
+    if (trocouDeTela && typeof document.startViewTransition === 'function') {
+      document.startViewTransition(desenhar);
+    } else {
+      desenhar();
+    }
   }
 
   function handleImportFile(file) {

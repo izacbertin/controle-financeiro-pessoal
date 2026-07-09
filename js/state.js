@@ -174,8 +174,19 @@ App.state = (function () {
     notify();
   }
 
-  function receitaDoMes(mesReferencia) {
+  // Receita do mês = lançamentos manuais + notas fiscais emitidas naquele mês.
+  // Emitir uma NF já é, por si só, faturar — não faz sentido lançar de novo
+  // como receita manual, então a nota entra automaticamente na conta.
+  function receitaManualDoMes(mesReferencia) {
     return utils.sum(data.receitas.filter((r) => r.mesReferencia === mesReferencia), (r) => r.valor);
+  }
+
+  function receitaNfDoMes(mesReferencia) {
+    return utils.sum(data.notasFiscais.filter((n) => n.mesEmissao === mesReferencia), (n) => n.valor);
+  }
+
+  function receitaDoMes(mesReferencia) {
+    return receitaManualDoMes(mesReferencia) + receitaNfDoMes(mesReferencia);
   }
 
   // ---------------------------------------------------------------------
@@ -349,10 +360,15 @@ App.state = (function () {
   function resumoAnual(ano) {
     const lista = gastosDoAno(ano);
     const t = totais(lista);
-    const receitaAnual = utils.sum(
+    const receitaManualAnual = utils.sum(
       data.receitas.filter((r) => utils.yearFromMonthRef(r.mesReferencia) === ano),
       (r) => r.valor
     );
+    const receitaNfAnual = utils.sum(
+      data.notasFiscais.filter((n) => utils.yearFromMonthRef(n.mesEmissao) === ano),
+      (n) => n.valor
+    );
+    const receitaAnual = receitaManualAnual + receitaNfAnual;
     return {
       ano,
       receitaAnual,
@@ -407,7 +423,7 @@ App.state = (function () {
     init, getData, getUI, setUI, subscribe, replaceData, resetAll, getTema, setTema,
     listCategorias, categoriaNome, addCategoria,
     addGasto, updateGasto, deleteGasto, marcarGastoPago, marcarGastoPendente,
-    addReceita, updateReceita, deleteReceita, receitaDoMes,
+    addReceita, updateReceita, deleteReceita, receitaDoMes, receitaManualDoMes, receitaNfDoMes,
     addNotaFiscal, updateNotaFiscal, deleteNotaFiscal,
     getFiltros, setFiltro, limparFiltros, statusEfetivo, gastosFiltrados,
     valorLiquido, gastosDoMes, gastosDoAno, totais, gastosPorCategoria,

@@ -2,6 +2,11 @@
  * Cadastro de receitas por mês de referência. Mais de um lançamento no mesmo
  * mês é permitido de propósito (ex.: salário fixo + um extra) — o Consolidado
  * soma tudo que estiver no mesmo mês.
+ *
+ * Notas fiscais emitidas (tela "Notas fiscais") contam automaticamente como
+ * receita do mês de emissão — emitir a nota já É faturar, não faz sentido
+ * lançar de novo aqui. Esta tela mostra as duas fontes lado a lado só pra
+ * ficar claro de onde vem o total que aparece no Painel/Consolidado.
  */
 window.App = window.App || {};
 App.views = App.views || {};
@@ -16,7 +21,11 @@ App.views.receitas = (function () {
     const todas = state.getData().receitas.slice().sort((a, b) => (a.mesReferencia < b.mesReferencia ? 1 : -1));
     const anos = state.anosDisponiveis();
     const lista = filtroAno ? todas.filter((r) => utils.yearFromMonthRef(r.mesReferencia) === Number(filtroAno)) : todas;
-    const total = utils.sum(lista, (r) => r.valor);
+    const totalManual = utils.sum(lista, (r) => r.valor);
+
+    const todasNf = state.getData().notasFiscais.slice().sort((a, b) => (a.mesEmissao < b.mesEmissao ? 1 : -1));
+    const listaNf = filtroAno ? todasNf.filter((n) => utils.yearFromMonthRef(n.mesEmissao) === Number(filtroAno)) : todasNf;
+    const totalNf = utils.sum(listaNf, (n) => n.valor);
 
     container.innerHTML = `
       <div class="view-header">
@@ -31,7 +40,9 @@ App.views.receitas = (function () {
         </select>
       </div>
 
-      <div class="list-summary">${lista.length} lançamento${lista.length === 1 ? '' : 's'} · Total ${utils.formatCurrency(total)}</div>
+      <p class="info-banner">💡 Notas fiscais emitidas contam automaticamente como receita do mês de emissão — não precisa lançar aqui de novo.</p>
+
+      <div class="list-summary">${lista.length} lançamento${lista.length === 1 ? '' : 's'} manual${lista.length === 1 ? '' : 'is'} · Total ${utils.formatCurrency(totalManual)} · + NFs ${utils.formatCurrency(totalNf)} · <strong>Receita total ${utils.formatCurrency(totalManual + totalNf)}</strong></div>
 
       ${lista.length ? `
         <div class="data-list data-list--receitas">

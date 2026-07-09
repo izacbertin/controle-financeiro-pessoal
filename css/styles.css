@@ -584,6 +584,15 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 
 .list-summary { font-size: 13px; color: var(--text-secondary); margin-bottom: var(--space-3); }
 
+.info-banner {
+  background: var(--accent-wash);
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-4);
+}
+
 /* ---------------------------------------------------------------------
    Listas de dados (Gastos, Receitas, NFs)
    --------------------------------------------------------------------- */
@@ -742,6 +751,36 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes scaleIn { from { opacity: 0; transform: scale(0.96) translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ---------------------------------------------------------------------
+   Transição entre telas (Painel -> Gastos -> Receitas...)
+   Só entra em ação quando a tela muda de fato (ver js/app.js) — o
+   navegador cuida de tirar uma "foto" do antes/depois e cross-fadear;
+   aqui só damos um empurrãozinho de movimento pra não ficar um corte seco.
+   Sem suporte à View Transitions API, a troca continua instantânea (nada
+   quebra, só não anima).
+   --------------------------------------------------------------------- */
+@keyframes tela-saindo { to { opacity: 0; transform: translateY(6px) scale(0.99); } }
+@keyframes tela-entrando { from { opacity: 0; transform: translateY(10px) scale(0.99); } }
+
+::view-transition-old(root) { animation: 180ms ease-out both tela-saindo; }
+::view-transition-new(root) { animation: 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both tela-entrando; }
+
+/* Pequeno "pop" de entrada em cards e elementos-chave — dá vida sem exigir
+   nenhum controle de animação em JS: como o conteúdo é redesenhado a cada
+   mudança, ele simplesmente entra assim toda vez que aparece. */
+@keyframes pop-in {
+  from { opacity: 0; transform: scale(0.94) translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.stat-tile, .card, .pill, .attention-list__item, .badge {
+  animation: pop-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+  .stat-tile, .card, .pill, .attention-list__item, .badge { animation: none; }
+}
 
 /* ---------------------------------------------------------------------
    Toast
