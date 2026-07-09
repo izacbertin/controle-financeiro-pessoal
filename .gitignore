@@ -1,0 +1,6 @@
+# Dados pessoais — nunca devem ir para um repositório público.
+# O app em si não tem dados embutidos; qualquer .json aqui é backup/importação
+# de alguém que estava usando a pasta localmente.
+dados-importados.json
+controle-financeiro-backup-*.json
+*.numbers
