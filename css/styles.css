@@ -25,6 +25,11 @@
   --accent: #0071e3;
   --accent-contrast: #ffffff;
   --accent-wash: rgba(0, 113, 227, 0.1);
+  --accent-shadow: rgba(0, 113, 227, 0.28);
+
+  /* Gradiente discreto do topo do dashboard (faixa de destaque) */
+  --hero-grad-1: rgba(0, 113, 227, 0.12);
+  --hero-grad-2: rgba(90, 200, 250, 0.10);
 
   --status-good: #0ca30c;
   --status-good-bg: rgba(12, 163, 12, 0.12);
@@ -77,6 +82,10 @@
 
     --accent: #0a84ff;
     --accent-wash: rgba(10, 132, 255, 0.16);
+    --accent-shadow: rgba(10, 132, 255, 0.4);
+
+    --hero-grad-1: rgba(10, 132, 255, 0.18);
+    --hero-grad-2: rgba(90, 200, 250, 0.10);
 
     --status-good: #32d74b;
     --status-good-bg: rgba(50, 215, 75, 0.16);
@@ -117,6 +126,10 @@
 
   --accent: #0a84ff;
   --accent-wash: rgba(10, 132, 255, 0.16);
+  --accent-shadow: rgba(10, 132, 255, 0.4);
+
+  --hero-grad-1: rgba(10, 132, 255, 0.18);
+  --hero-grad-2: rgba(90, 200, 250, 0.10);
 
   --status-good: #32d74b;
   --status-good-bg: rgba(50, 215, 75, 0.16);
@@ -142,6 +155,103 @@
 }
 
 /* ---------------------------------------------------------------------
+   Tema Oceano — azuis suaves (água/céu), transmitindo calma. Tem variante
+   clara (padrão do data-theme="oceano") e escura (quando o aparelho está no
+   modo escuro), mantendo a mesma estética minimalista. A paleta dos gráficos
+   segue a mesma dos temas neutros (validada p/ daltonismo); só as superfícies,
+   textos e a cor de destaque mudam pro tom oceano.
+   --------------------------------------------------------------------- */
+:root[data-theme="oceano"] {
+  --page-bg: #e9f3fb;
+  --card-bg: #ffffff;
+  --sidebar-bg: #f1f8fd;
+  --overlay-bg: rgba(8, 40, 60, 0.35);
+  --text-primary: #0f2c3d;
+  --text-secondary: #3f6172;
+  --text-muted: #7fa0b1;
+  --border: rgba(12, 74, 110, 0.12);
+  --track-bg: #dcebf5;
+  --shadow-sm: 0 1px 2px rgba(9, 61, 92, 0.06);
+  --shadow-md: 0 8px 26px rgba(9, 61, 92, 0.14);
+
+  --accent: #0a90c7;
+  --accent-contrast: #ffffff;
+  --accent-wash: rgba(10, 144, 199, 0.12);
+  --accent-shadow: rgba(10, 144, 199, 0.3);
+
+  --hero-grad-1: rgba(10, 144, 199, 0.16);
+  --hero-grad-2: rgba(90, 200, 250, 0.16);
+
+  --status-good: #0ca30c;
+  --status-good-bg: rgba(12, 163, 12, 0.12);
+  --status-warning: #a86400;
+  --status-warning-bg: rgba(250, 178, 25, 0.18);
+  --status-critical: #d03b3b;
+  --status-critical-bg: rgba(208, 59, 59, 0.12);
+
+  --chart-cat-1: #2a78d6;
+  --chart-cat-2: #1baf7a;
+  --chart-cat-3: #eda100;
+  --chart-cat-4: #008300;
+  --chart-cat-5: #4a3aa7;
+  --chart-cat-6: #e34948;
+  --chart-cat-7: #e87ba4;
+  --chart-outras: #90a7b4;
+
+  --series-receita: #0a90c7;
+  --series-despesa: #e34948;
+
+  --chart-grid: #d3e4f0;
+  --chart-axis: #7fa0b1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="oceano"] {
+    --page-bg: #041017;
+    --card-bg: #0e2734;
+    --sidebar-bg: #0a1e29;
+    --overlay-bg: rgba(0, 0, 0, 0.55);
+    --text-primary: #e9f6fd;
+    --text-secondary: #a0bfce;
+    --text-muted: #6f8d9c;
+    --border: rgba(120, 200, 235, 0.13);
+    --track-bg: #163541;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-md: 0 8px 26px rgba(0, 0, 0, 0.5);
+
+    --accent: #38b6e6;
+    --accent-contrast: #04222e;
+    --accent-wash: rgba(56, 182, 230, 0.18);
+    --accent-shadow: rgba(56, 182, 230, 0.4);
+
+    --hero-grad-1: rgba(56, 182, 230, 0.22);
+    --hero-grad-2: rgba(20, 120, 170, 0.18);
+
+    --status-good: #32d74b;
+    --status-good-bg: rgba(50, 215, 75, 0.16);
+    --status-warning: #fab219;
+    --status-warning-bg: rgba(250, 178, 25, 0.16);
+    --status-critical: #ff6961;
+    --status-critical-bg: rgba(255, 105, 97, 0.16);
+
+    --chart-cat-1: #3987e5;
+    --chart-cat-2: #199e70;
+    --chart-cat-3: #c98500;
+    --chart-cat-4: #2ea62e;
+    --chart-cat-5: #9085e9;
+    --chart-cat-6: #e66767;
+    --chart-cat-7: #d55181;
+    --chart-outras: #6f8d9c;
+
+    --series-receita: #38b6e6;
+    --series-despesa: #e66767;
+
+    --chart-grid: #1a3a47;
+    --chart-axis: #6f8d9c;
+  }
+}
+
+/* ---------------------------------------------------------------------
    Reset & base
    --------------------------------------------------------------------- */
 
@@ -158,7 +268,11 @@ body {
 body.no-scroll { overflow: hidden; }
 h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 h1 { font-size: 28px; }
-h2 { font-size: 17px; margin-bottom: var(--space-4); }
+h2 { font-size: 17px; margin-bottom: var(--space-4); display: flex; align-items: center; gap: 8px; }
+.h2-icon { display: inline-flex; }
+.h2-icon .icon { width: 18px; height: 18px; vertical-align: 0; }
+.h2-icon--critical { color: var(--status-critical); }
+.h2-icon--accent { color: var(--accent); }
 p { margin: 0; }
 button { font-family: inherit; }
 input, select, textarea { font-family: inherit; font-size: 15px; }
@@ -216,7 +330,9 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 }
 .sidebar__link:hover { background: var(--track-bg); color: var(--text-primary); }
 .sidebar__link.is-active { background: var(--accent-wash); color: var(--accent); font-weight: 600; }
-.nav-icon { width: 20px; text-align: center; }
+.nav-icon { display: inline-flex; align-items: center; justify-content: center; }
+.nav-icon .icon { width: 20px; height: 20px; vertical-align: 0; }
+.sidebar__link:hover .nav-icon .icon { transform: scale(1.08); }
 
 .sidebar__footer {
   display: flex;
@@ -294,6 +410,21 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 }
 
 /* ---------------------------------------------------------------------
+   Ícones (set de linha único — ver js/components/icons.js)
+   Todo ícone é um <svg class="icon"> com currentColor, então segue a cor do
+   texto/tema onde for colocado. O tamanho padrão é 1em (acompanha a fonte);
+   contextos específicos ajustam largura/altura abaixo.
+   --------------------------------------------------------------------- */
+
+.icon {
+  width: 1.15em;
+  height: 1.15em;
+  flex-shrink: 0;
+  vertical-align: -0.15em;
+  transition: transform var(--transition);
+}
+
+/* ---------------------------------------------------------------------
    Botões
    --------------------------------------------------------------------- */
 
@@ -304,31 +435,38 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: background var(--transition), transform var(--transition), opacity var(--transition);
+  transition: background var(--transition), transform var(--transition), opacity var(--transition), box-shadow var(--transition);
 }
+.button:hover { transform: translateY(-1px); }
 .button:active { transform: scale(0.97); }
-.button--primary { background: var(--accent); color: var(--accent-contrast); }
-.button--primary:hover { opacity: 0.9; }
+.button--primary { background: var(--accent); color: var(--accent-contrast); box-shadow: 0 2px 8px var(--accent-shadow); }
+.button--primary:hover { opacity: 0.95; box-shadow: 0 4px 14px var(--accent-shadow); }
 .button--ghost { background: var(--track-bg); color: var(--text-primary); }
 .button--ghost:hover { opacity: 0.85; }
 .button--danger { color: var(--status-critical); }
-.button--full { width: 100%; text-align: center; }
+.button--full { width: 100%; }
 .button--small { padding: 6px 10px; font-size: 13px; }
+
+/* Botões com ícone + texto: alinha os dois com um respiro entre eles. */
+.button--icon { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+.button--icon .icon { width: 16px; height: 16px; vertical-align: 0; }
+.button--full.button--icon { justify-content: flex-start; }
 
 .icon-button {
   border: none;
   background: var(--track-bg);
   color: var(--text-primary);
-  width: 30px; height: 30px;
-  border-radius: 8px;
+  width: 32px; height: 32px;
+  border-radius: 9px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background var(--transition), transform var(--transition);
+  transition: background var(--transition), transform var(--transition), color var(--transition);
 }
-.icon-button:hover { opacity: 0.85; }
-.icon-button:active { transform: scale(0.94); }
+.icon-button .icon { width: 17px; height: 17px; vertical-align: 0; }
+.icon-button:hover { background: var(--accent-wash); color: var(--accent); }
+.icon-button:active { transform: scale(0.9); }
 
 /* ---------------------------------------------------------------------
    Cards / grids de indicadores
@@ -367,12 +505,32 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
   margin-bottom: var(--space-5);
 }
 .stat-tile {
+  position: relative;
   background: var(--card-bg);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   padding: var(--space-4);
+  transition: transform var(--transition), box-shadow var(--transition);
 }
-.stat-tile__label { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+.stat-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.stat-tile__icon {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--track-bg);
+  color: var(--text-secondary);
+}
+.stat-tile__icon .icon { width: 19px; height: 19px; vertical-align: 0; }
+.stat-tile__icon--good { background: var(--status-good-bg); color: var(--status-good); }
+.stat-tile__icon--critical { background: var(--status-critical-bg); color: var(--status-critical); }
+.stat-tile__icon--accent { background: var(--accent-wash); color: var(--accent); }
+.stat-tile__label { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; padding-right: 40px; }
 .stat-tile__value { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
 .stat-tile__sep { color: var(--text-muted); font-weight: 400; }
 .stat-tile__delta { font-size: 12px; margin-top: 4px; color: var(--text-secondary); }
@@ -394,12 +552,16 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
   padding: 7px 0;
 }
 .bar-row__label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-size: 13px;
   color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 0;
 }
+.bar-row__icon { display: inline-flex; flex-shrink: 0; }
+.bar-row__icon .icon { width: 16px; height: 16px; vertical-align: 0; }
+.bar-row__nome { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bar-row__track {
   height: 8px;
   background: var(--track-bg);
@@ -409,7 +571,12 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 .bar-row__fill {
   height: 100%;
   border-radius: 999px;
-  transition: width 400ms ease;
+  /* A largura anima de 0% -> valor no mount (ver charts.js). Curva suave
+     estilo Apple; cai pra sem-animação se o usuário pediu menos movimento. */
+  transition: width 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar-row__fill { transition: none; }
 }
 .bar-row__value {
   display: flex;
@@ -635,6 +802,9 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 .data-list__row:last-child > span { border-bottom: none; }
 .data-list__descricao { flex-direction: column; align-items: flex-start !important; }
 .data-list__obs { font-size: 12px; color: var(--text-muted); }
+.data-list__categoria { gap: 8px; }
+.cat-icon { display: inline-flex; color: var(--text-secondary); }
+.cat-icon .icon { width: 17px; height: 17px; vertical-align: 0; }
 .data-list__acoes { gap: 4px; justify-content: flex-end; }
 .valor-mono { font-variant-numeric: tabular-nums; }
 
@@ -766,20 +936,58 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 ::view-transition-old(root) { animation: 180ms ease-out both tela-saindo; }
 ::view-transition-new(root) { animation: 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both tela-entrando; }
 
-/* Pequeno "pop" de entrada em cards e elementos-chave — dá vida sem exigir
-   nenhum controle de animação em JS: como o conteúdo é redesenhado a cada
-   mudança, ele simplesmente entra assim toda vez que aparece. */
-@keyframes pop-in {
-  from { opacity: 0; transform: scale(0.94) translateY(4px); }
+/* Entrada suave (fade + slide) de cards e blocos-chave — como o conteúdo é
+   redesenhado a cada troca de tela/filtro/mês, ele "entra" assim toda vez que
+   aparece, sem precisar de observador de scroll. Os stat-tiles e cards entram
+   em cascata (stagger) pra dar um ar mais cuidado, estilo Apple. */
+@keyframes reveal-in {
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: none; }
 }
-.stat-tile, .card, .pill, .attention-list__item, .badge {
-  animation: pop-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+.stat-tile, .card {
+  animation: reveal-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
+.stat-grid .stat-tile:nth-child(1) { animation-delay: 20ms; }
+.stat-grid .stat-tile:nth-child(2) { animation-delay: 70ms; }
+.stat-grid .stat-tile:nth-child(3) { animation-delay: 120ms; }
+.stat-grid .stat-tile:nth-child(4) { animation-delay: 170ms; }
+.stat-grid .stat-tile:nth-child(5) { animation-delay: 220ms; }
+.stat-grid .stat-tile:nth-child(6) { animation-delay: 270ms; }
+.card-grid .card:nth-child(2) { animation-delay: 90ms; }
+
+/* Faixa de destaque no topo (profundidade sutil, sem pesar): dois brilhos
+   radiais suaves no tom do tema, atrás do conteúdo. Sem filtro de blur pra
+   não custar performance no celular — os gradientes já são difusos. */
+.view-container { position: relative; }
+/* Só os irmãos QUE VÊM DEPOIS do glow sobem de camada (e o glow só existe no
+   dashboard). Assim não criamos stacking context nos filhos de outras telas —
+   o que, por ex., esconderia o dropdown de categorias atrás da lista. */
+.dashboard-hero-glow ~ * { position: relative; z-index: 1; }
+.dashboard-hero-glow {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 320px;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(55% 80% at 12% 0%, var(--hero-grad-1), transparent 72%),
+    radial-gradient(50% 75% at 88% 8%, var(--hero-grad-2), transparent 72%);
+  animation: reveal-in 700ms ease both;
+}
+
+/* Microinterações de lista */
+.data-list__row { transition: background var(--transition); }
+.data-list__row:hover { background: var(--track-bg); }
+.attention-list__item { transition: transform var(--transition), background var(--transition); }
+.attention-list__item:hover { transform: translateX(2px); }
+.chip { transition: background var(--transition), color var(--transition), border-color var(--transition), transform var(--transition); }
+.chip:hover { transform: translateY(-1px); }
+.segmented__option { transition: color var(--transition), background var(--transition); }
 
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
-  .stat-tile, .card, .pill, .attention-list__item, .badge { animation: none; }
+  .stat-tile, .card, .dashboard-hero-glow { animation: none; }
+  .button:hover, .stat-tile:hover, .attention-list__item:hover, .chip:hover { transform: none; }
 }
 
 /* ---------------------------------------------------------------------

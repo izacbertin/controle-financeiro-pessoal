@@ -20,7 +20,7 @@ App.views.notasFiscais = (function () {
     container.innerHTML = `
       <div class="view-header">
         <h1>Notas fiscais</h1>
-        <button type="button" class="button button--primary" data-action="nova-nf">+ Nova NF</button>
+        <button type="button" class="button button--primary button--icon" data-action="nova-nf">${App.icons.get('plus')} Nova NF</button>
       </div>
 
       <div class="filter-bar">
@@ -42,8 +42,8 @@ App.views.notasFiscais = (function () {
               <span>${utils.formatDate(n.dataEmissao)}</span>
               <span class="valor-mono">${utils.formatCurrency(n.valor)}</span>
               <span class="data-list__acoes">
-                <button type="button" class="icon-button" title="Editar" data-action="editar" data-id="${n.id}">✎</button>
-                <button type="button" class="icon-button" title="Excluir" data-action="excluir" data-id="${n.id}">🗑</button>
+                <button type="button" class="icon-button" title="Editar" data-action="editar" data-id="${n.id}">${App.icons.get('pencil')}</button>
+                <button type="button" class="icon-button" title="Excluir" data-action="excluir" data-id="${n.id}">${App.icons.get('trash')}</button>
               </span>
             </div>`).join('')}
         </div>` : '<p class="empty-hint empty-hint--block">Nenhuma nota fiscal cadastrada ainda.</p>'}

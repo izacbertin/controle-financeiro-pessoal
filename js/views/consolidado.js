@@ -37,9 +37,9 @@ App.views.consolidado = (function () {
     const r = state.resumoMensal(ui.consolidadoMonth);
     container.innerHTML = `
       <div class="month-switcher month-switcher--standalone">
-        <button type="button" class="icon-button" data-action="mes-anterior" aria-label="Mês anterior">‹</button>
+        <button type="button" class="icon-button" data-action="mes-anterior" aria-label="Mês anterior">${App.icons.get('chevron-left')}</button>
         <input type="month" class="month-input" value="${ui.consolidadoMonth}" data-field="consolidadoMonth" />
-        <button type="button" class="icon-button" data-action="mes-seguinte" aria-label="Próximo mês">›</button>
+        <button type="button" class="icon-button" data-action="mes-seguinte" aria-label="Próximo mês">${App.icons.get('chevron-right')}</button>
       </div>
 
       <div class="stat-grid">

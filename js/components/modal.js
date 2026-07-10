@@ -22,7 +22,7 @@ App.modal = (function () {
         <div class="modal-dialog ${size === 'lg' ? 'modal-dialog--lg' : ''}" role="dialog" aria-modal="true" aria-label="${App.utils.escapeHtml(title)}">
           <div class="modal-header">
             <h2>${App.utils.escapeHtml(title)}</h2>
-            <button type="button" class="icon-button" data-action="closeModal" aria-label="Fechar">✕</button>
+            <button type="button" class="icon-button" data-action="closeModal" aria-label="Fechar">${App.icons.get('x')}</button>
           </div>
           <div class="modal-body">${bodyHtml}</div>
         </div>

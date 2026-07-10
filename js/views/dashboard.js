@@ -17,8 +17,12 @@ App.views.dashboard = (function () {
     const deltaHtml = opts.delta != null
       ? `<div class="stat-tile__delta stat-tile__delta--${opts.deltaSentido || 'neutro'}">${opts.delta}</div>`
       : '';
+    const iconHtml = opts.icon
+      ? `<span class="stat-tile__icon stat-tile__icon--${opts.iconTone || 'neutro'}">${App.icons.get(opts.icon)}</span>`
+      : '';
     return `
       <div class="stat-tile">
+        ${iconHtml}
         <div class="stat-tile__label">${label}</div>
         <div class="stat-tile__value">${value}</div>
         ${deltaHtml}
@@ -49,27 +53,28 @@ App.views.dashboard = (function () {
     const variacaoSentido = variacao == null ? 'neutro' : (variacao > 0 ? 'negativo' : 'positivo');
 
     container.innerHTML = `
+      <div class="dashboard-hero-glow" aria-hidden="true"></div>
       <div class="view-header">
         <h1>Painel</h1>
         <div class="month-switcher">
-          <button type="button" class="icon-button" data-action="mes-anterior" aria-label="Mês anterior">‹</button>
+          <button type="button" class="icon-button" data-action="mes-anterior" aria-label="Mês anterior">${App.icons.get('chevron-left')}</button>
           <input type="month" class="month-input" value="${mes}" data-field="dashboardMonth" />
-          <button type="button" class="icon-button" data-action="mes-seguinte" aria-label="Próximo mês">›</button>
+          <button type="button" class="icon-button" data-action="mes-seguinte" aria-label="Próximo mês">${App.icons.get('chevron-right')}</button>
         </div>
       </div>
 
       <section class="stat-grid">
-        ${statTileCountUp('Saldo do mês', { chave: 'dashboard:saldo', valor: resumo.saldo, wrapClass: `valor--${saldoSentido}` })}
-        ${statTileCountUp('Receita do mês', { chave: 'dashboard:receita', valor: resumo.receita })}
+        ${statTileCountUp('Saldo do mês', { chave: 'dashboard:saldo', valor: resumo.saldo, wrapClass: `valor--${saldoSentido}` }, { icon: 'wallet', iconTone: saldoSentido === 'positivo' ? 'good' : 'critical' })}
+        ${statTileCountUp('Receita do mês', { chave: 'dashboard:receita', valor: resumo.receita }, { icon: 'trending-up', iconTone: 'good' })}
         ${statTileCountUp('Total gasto', { chave: 'dashboard:totalGasto', valor: resumo.totalAposDescontos }, {
-          delta: `${utils.formatPercent(resumo.percentPago, 0)} pago`, deltaSentido: 'neutro',
+          delta: `${utils.formatPercent(resumo.percentPago, 0)} pago`, deltaSentido: 'neutro', icon: 'trending-down', iconTone: 'accent',
         })}
-        ${statTile('Pago / Pendente', `<span data-countup="dashboard:pago" data-value="${resumo.totalPago}"></span> <span class="stat-tile__sep">/</span> <span data-countup="dashboard:pendente" data-value="${resumo.totalPendente}"></span>`)}
+        ${statTile('Pago / Pendente', `<span data-countup="dashboard:pago" data-value="${resumo.totalPago}"></span> <span class="stat-tile__sep">/</span> <span data-countup="dashboard:pendente" data-value="${resumo.totalPendente}"></span>`, { icon: 'check-circle', iconTone: 'good' })}
         ${resumo.percentRendaComprometida == null
-          ? statTile('Renda comprometida', '—')
-          : statTileCountUp('Renda comprometida', { chave: 'dashboard:rendaComprometida', valor: resumo.percentRendaComprometida, fmt: 'percent' })}
+          ? statTile('Renda comprometida', '—', { icon: 'gauge', iconTone: 'accent' })
+          : statTileCountUp('Renda comprometida', { chave: 'dashboard:rendaComprometida', valor: resumo.percentRendaComprometida, fmt: 'percent' }, { icon: 'gauge', iconTone: 'accent' })}
         ${statTile('Vs. mês anterior', variacaoTexto === '—' ? '—' : utils.formatPercent(Math.abs(variacao), 1), {
-          delta: variacao == null ? null : (variacao > 0 ? '▲ aumentou' : '▼ diminuiu'), deltaSentido: variacaoSentido,
+          delta: variacao == null ? null : (variacao > 0 ? '▲ aumentou' : '▼ diminuiu'), deltaSentido: variacaoSentido, icon: 'activity', iconTone: 'neutro',
         })}
       </section>
 
@@ -92,14 +97,14 @@ App.views.dashboard = (function () {
       <section class="card-grid card-grid--2">
         <div class="card">
           <div class="card__header-row">
-            <h2>Gastos em atraso</h2>
+            <h2><span class="h2-icon h2-icon--critical">${App.icons.get('alert-triangle')}</span> Gastos em atraso</h2>
             <span class="badge badge--critical">${atrasados.length}</span>
           </div>
           ${renderAtrasados(atrasados)}
         </div>
         <div class="card">
           <div class="card__header-row">
-            <h2>Próximos vencimentos</h2>
+            <h2><span class="h2-icon h2-icon--accent">${App.icons.get('calendar')}</span> Próximos vencimentos</h2>
             <div class="segmented" data-role="segmented-prazo">
               ${[7, 15, 30].map((d) => `<button type="button" class="segmented__option ${d === prazoProximos ? 'is-active' : ''}" data-prazo="${d}">${d}d</button>`).join('')}
             </div>
@@ -110,7 +115,7 @@ App.views.dashboard = (function () {
     `;
 
     // Gastos por categoria (renderizado à parte por usar o componente de barras)
-    App.charts.renderBarList(container.querySelector('[data-role="categoria"]'), porCategoria);
+    App.charts.renderBarList(container.querySelector('[data-role="categoria"]'), porCategoria, { icons: true });
     App.charts.renderBarList(container.querySelector('[data-role="fixo-variavel"]'), fixoVariavel);
     App.charts.renderLineChart(container.querySelector('[data-role="evolucao"]'), {
       labels: evolucao.labels,
@@ -136,7 +141,7 @@ App.views.dashboard = (function () {
           </div>
           <div class="attention-list__actions">
             <span class="attention-list__valor">${utils.formatCurrency(state.valorLiquido(g))}</span>
-            <button type="button" class="button button--small" data-action="pagar" data-id="${g.id}">Marcar pago</button>
+            <button type="button" class="button button--small button--icon" data-action="pagar" data-id="${g.id}">${App.icons.get('check')} Marcar pago</button>
           </div>
         </li>`;
     }).join('')}</ul>`;
@@ -154,7 +159,7 @@ App.views.dashboard = (function () {
           </div>
           <div class="attention-list__actions">
             <span class="attention-list__valor">${utils.formatCurrency(state.valorLiquido(g))}</span>
-            <button type="button" class="button button--small" data-action="pagar" data-id="${g.id}">Marcar pago</button>
+            <button type="button" class="button button--small button--icon" data-action="pagar" data-id="${g.id}">${App.icons.get('check')} Marcar pago</button>
           </div>
         </li>`;
     }).join('')}</ul>`;

@@ -3,10 +3,10 @@
  * mês é permitido de propósito (ex.: salário fixo + um extra) — o Consolidado
  * soma tudo que estiver no mesmo mês.
  *
- * Notas fiscais emitidas (tela "Notas fiscais") contam automaticamente como
- * receita do mês de emissão — emitir a nota já É faturar, não faz sentido
- * lançar de novo aqui. Esta tela mostra as duas fontes lado a lado só pra
- * ficar claro de onde vem o total que aparece no Painel/Consolidado.
+ * As notas fiscais (tela "Notas fiscais") são um controle SEPARADO de
+ * faturamento emitido — não entram automaticamente como receita. Isso é de
+ * propósito: assim dá pra programar os gastos de um mês antes de ter emitido
+ * a nota daquele mês, lançando a receita esperada manualmente.
  */
 window.App = window.App || {};
 App.views = App.views || {};
@@ -21,16 +21,12 @@ App.views.receitas = (function () {
     const todas = state.getData().receitas.slice().sort((a, b) => (a.mesReferencia < b.mesReferencia ? 1 : -1));
     const anos = state.anosDisponiveis();
     const lista = filtroAno ? todas.filter((r) => utils.yearFromMonthRef(r.mesReferencia) === Number(filtroAno)) : todas;
-    const totalManual = utils.sum(lista, (r) => r.valor);
-
-    const todasNf = state.getData().notasFiscais.slice().sort((a, b) => (a.mesEmissao < b.mesEmissao ? 1 : -1));
-    const listaNf = filtroAno ? todasNf.filter((n) => utils.yearFromMonthRef(n.mesEmissao) === Number(filtroAno)) : todasNf;
-    const totalNf = utils.sum(listaNf, (n) => n.valor);
+    const total = utils.sum(lista, (r) => r.valor);
 
     container.innerHTML = `
       <div class="view-header">
         <h1>Receitas</h1>
-        <button type="button" class="button button--primary" data-action="nova-receita">+ Nova receita</button>
+        <button type="button" class="button button--primary button--icon" data-action="nova-receita">${App.icons.get('plus')} Nova receita</button>
       </div>
 
       <div class="filter-bar">
@@ -40,9 +36,7 @@ App.views.receitas = (function () {
         </select>
       </div>
 
-      <p class="info-banner">💡 Notas fiscais emitidas contam automaticamente como receita do mês de emissão — não precisa lançar aqui de novo.</p>
-
-      <div class="list-summary">${lista.length} lançamento${lista.length === 1 ? '' : 's'} manual${lista.length === 1 ? '' : 'is'} · Total ${utils.formatCurrency(totalManual)} · + NFs ${utils.formatCurrency(totalNf)} · <strong>Receita total ${utils.formatCurrency(totalManual + totalNf)}</strong></div>
+      <div class="list-summary">${lista.length} lançamento${lista.length === 1 ? '' : 's'} · Total ${utils.formatCurrency(total)}</div>
 
       ${lista.length ? `
         <div class="data-list data-list--receitas">
@@ -53,8 +47,8 @@ App.views.receitas = (function () {
               <span class="valor-mono">${utils.formatCurrency(r.valor)}</span>
               <span>${utils.escapeHtml(r.observacao || '—')}</span>
               <span class="data-list__acoes">
-                <button type="button" class="icon-button" title="Editar" data-action="editar" data-id="${r.id}">✎</button>
-                <button type="button" class="icon-button" title="Excluir" data-action="excluir" data-id="${r.id}">🗑</button>
+                <button type="button" class="icon-button" title="Editar" data-action="editar" data-id="${r.id}">${App.icons.get('pencil')}</button>
+                <button type="button" class="icon-button" title="Excluir" data-action="excluir" data-id="${r.id}">${App.icons.get('trash')}</button>
               </span>
             </div>`).join('')}
         </div>` : '<p class="empty-hint empty-hint--block">Nenhuma receita cadastrada ainda.</p>'}

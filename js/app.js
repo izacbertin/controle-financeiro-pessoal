@@ -9,22 +9,25 @@
   const state = App.state;
 
   const NAV_ITEMS = [
-    { view: 'dashboard', label: 'Painel', icon: '⌂' },
-    { view: 'gastos', label: 'Gastos', icon: '▤' },
-    { view: 'receitas', label: 'Receitas', icon: '↑' },
-    { view: 'notasFiscais', label: 'Notas fiscais', icon: '▦' },
-    { view: 'consolidado', label: 'Consolidado', icon: 'Σ' },
+    { view: 'dashboard', label: 'Painel', icon: 'grid' },
+    { view: 'gastos', label: 'Gastos', icon: 'list' },
+    { view: 'receitas', label: 'Receitas', icon: 'trending-up' },
+    { view: 'notasFiscais', label: 'Notas fiscais', icon: 'file-text' },
+    { view: 'consolidado', label: 'Consolidado', icon: 'bar-chart' },
   ];
 
-  const TEMA_CICLO = { sistema: 'claro', claro: 'escuro', escuro: 'sistema' };
-  const TEMA_ICONE = { sistema: '◐', claro: '☀', escuro: '☾' };
+  // Ciclo de temas: Automático -> Claro -> Escuro -> Oceano -> (volta).
+  // "sistema" e "oceano" seguem o claro/escuro do aparelho; "claro"/"escuro"
+  // são fixos. (Ver as variáveis de cor em css/styles.css.)
+  const TEMA_CICLO = { sistema: 'claro', claro: 'escuro', escuro: 'oceano', oceano: 'sistema' };
+  const TEMA_ICONE = { sistema: 'contrast', claro: 'sun', escuro: 'moon', oceano: 'waves' };
+  const TEMA_LABEL = { sistema: 'Automático', claro: 'Claro', escuro: 'Escuro', oceano: 'Oceano' };
   let ultimaViewRenderizada = null;
-  const TEMA_LABEL = { sistema: 'Automático', claro: 'Claro', escuro: 'Escuro' };
 
   function navHtml(activeView, extraClass) {
     return NAV_ITEMS.map((item) => `
       <button type="button" class="${extraClass} ${item.view === activeView ? 'is-active' : ''}" data-action="nav" data-view="${item.view}">
-        <span class="nav-icon" aria-hidden="true">${item.icon}</span>
+        <span class="nav-icon" aria-hidden="true">${App.icons.get(item.icon)}</span>
         <span class="nav-label">${item.label}</span>
       </button>`).join('');
   }
@@ -36,12 +39,12 @@
         <div class="sidebar__brand">Controle Financeiro</div>
         <nav class="sidebar__nav" data-role="nav-desktop"></nav>
         <div class="sidebar__footer">
-          <button type="button" class="button button--ghost button--full" data-action="tema">
+          <button type="button" class="button button--ghost button--full button--icon" data-action="tema">
             <span data-role="tema-icone"></span> <span data-role="tema-label"></span>
           </button>
-          <button type="button" class="button button--ghost button--full" data-action="exportar">Exportar backup</button>
-          <button type="button" class="button button--ghost button--full" data-action="importar">Importar backup</button>
-          <button type="button" class="button button--ghost button--full button--danger" data-action="zerar">Zerar dados</button>
+          <button type="button" class="button button--ghost button--full button--icon" data-action="exportar">${App.icons.get('download')} Exportar backup</button>
+          <button type="button" class="button button--ghost button--full button--icon" data-action="importar">${App.icons.get('upload')} Importar backup</button>
+          <button type="button" class="button button--ghost button--full button--icon button--danger" data-action="zerar">${App.icons.get('trash')} Zerar dados</button>
         </div>
       </aside>
       <main id="view-container" class="view-container"></main>
@@ -51,11 +54,15 @@
 
   function applyTema() {
     const tema = state.getTema();
+    // data-theme controla a paleta no CSS. "sistema" e "oceano" não fixam
+    // claro/escuro — deixam o prefers-color-scheme do aparelho decidir a
+    // variante (por isso oceano tem versão clara e escura automaticamente).
     if (tema === 'sistema') delete document.documentElement.dataset.theme;
+    else if (tema === 'oceano') document.documentElement.dataset.theme = 'oceano';
     else document.documentElement.dataset.theme = tema === 'escuro' ? 'dark' : 'light';
     const icone = document.querySelector('[data-role="tema-icone"]');
     const label = document.querySelector('[data-role="tema-label"]');
-    if (icone) icone.textContent = TEMA_ICONE[tema];
+    if (icone) icone.innerHTML = App.icons.get(TEMA_ICONE[tema]);
     if (label) label.textContent = TEMA_LABEL[tema];
   }
 

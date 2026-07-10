@@ -37,6 +37,9 @@ App.charts = (function () {
     return topo;
   }
 
+  // opts.icons: quando true, mostra um ícone de categoria antes do rótulo
+  // (resolvido pelo nome via App.icons.forCategoria). As barras entram com
+  // uma animação de "crescimento" da largura logo após o mount.
   function renderBarList(container, items, opts) {
     opts = opts || {};
     const formatValue = opts.formatValue || utils.formatCurrency;
@@ -48,11 +51,14 @@ App.charts = (function () {
     container.innerHTML = items.map((item, index) => {
       const largura = utils.clamp((item.valor / max) * 100, item.valor > 0 ? 2 : 0, 100);
       const cor = item.nome === 'Outras' ? 'var(--chart-outras)' : `var(--chart-cat-${(index % 7) + 1})`;
+      const iconeHtml = opts.icons
+        ? `<span class="bar-row__icon" style="color:${cor};">${App.icons.forCategoria(item.nome)}</span>`
+        : '';
       return `
         <div class="bar-row">
-          <div class="bar-row__label">${utils.escapeHtml(item.nome)}</div>
+          <div class="bar-row__label">${iconeHtml}<span class="bar-row__nome">${utils.escapeHtml(item.nome)}</span></div>
           <div class="bar-row__track">
-            <div class="bar-row__fill" style="width:${largura}%; background:${cor};"></div>
+            <div class="bar-row__fill" style="width:0%; background:${cor};" data-w="${largura}"></div>
           </div>
           <div class="bar-row__value">
             <span class="bar-row__amount">${formatValue(item.valor)}</span>
@@ -60,6 +66,14 @@ App.charts = (function () {
           </div>
         </div>`;
     }).join('');
+
+    // Anima as larguras no próximo frame (parte de 0% pra crescer). A
+    // transição em si é do CSS (.bar-row__fill { transition: width }).
+    requestAnimationFrame(() => {
+      container.querySelectorAll('.bar-row__fill').forEach((el) => {
+        el.style.width = el.dataset.w + '%';
+      });
+    });
   }
 
   // -----------------------------------------------------------------------
@@ -116,8 +130,8 @@ App.charts = (function () {
       const lastX = xAt(lastIndex);
       const lastY = yAt(s.values[lastIndex]);
       return `
-        <path d="${d}" fill="none" stroke="var(--series-${s.key})" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
-        <circle cx="${lastX}" cy="${lastY}" r="4" fill="var(--series-${s.key})" stroke="var(--card-bg)" stroke-width="2" />
+        <path class="chart-line" d="${d}" fill="none" stroke="var(--series-${s.key})" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+        <circle class="chart-end-dot" cx="${lastX}" cy="${lastY}" r="4" fill="var(--series-${s.key})" stroke="var(--card-bg)" stroke-width="2" />
         <text x="${utils.clamp(lastX, PAD.left, LINE_W - PAD.right - 40)}" y="${utils.clamp(lastY - 10, PAD.top + 10, LINE_H - PAD.bottom - 4)}" class="chart-end-label" text-anchor="end">${utils.escapeHtml(formatValue(s.values[lastIndex]))}</text>`;
     }).join('');
 
@@ -155,7 +169,38 @@ App.charts = (function () {
         </div>
       </details>`;
 
+    animateLineDraw(container);
     wireLineChartInteraction(container, { labels, series, xAt, xStep, formatValue });
+  }
+
+  // Faz cada linha "se desenhar" da esquerda pra direita: usa o comprimento
+  // real do traçado como dasharray e anima o dashoffset de 100% -> 0. Os
+  // pontos/rótulos da ponta entram com um fade logo depois. Respeita quem
+  // pediu menos movimento (prefers-reduced-motion).
+  function animateLineDraw(container) {
+    const prefereMenosMovimento = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const linhas = container.querySelectorAll('.chart-line');
+    const pontas = container.querySelectorAll('.chart-end-dot, .chart-end-label');
+    if (prefereMenosMovimento || !linhas.length) return;
+
+    linhas.forEach((linha) => {
+      const comprimento = linha.getTotalLength();
+      linha.style.transition = 'none';
+      linha.style.strokeDasharray = comprimento;
+      linha.style.strokeDashoffset = comprimento;
+    });
+    pontas.forEach((p) => { p.style.transition = 'none'; p.style.opacity = '0'; });
+
+    requestAnimationFrame(() => {
+      linhas.forEach((linha) => {
+        linha.style.transition = 'stroke-dashoffset 900ms cubic-bezier(0.4, 0, 0.2, 1)';
+        linha.style.strokeDashoffset = '0';
+      });
+      pontas.forEach((p) => {
+        p.style.transition = 'opacity 400ms ease 600ms';
+        p.style.opacity = '1';
+      });
+    });
   }
 
   function wireLineChartInteraction(container, { labels, series, xAt, xStep, formatValue }) {

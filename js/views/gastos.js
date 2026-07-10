@@ -36,7 +36,7 @@ App.views.gastos = (function () {
     container.innerHTML = `
       <div class="view-header">
         <h1>Gastos</h1>
-        <button type="button" class="button button--primary" data-action="novo-gasto">+ Novo gasto</button>
+        <button type="button" class="button button--primary button--icon" data-action="novo-gasto">${App.icons.get('plus')} Novo gasto</button>
       </div>
 
       <div class="filter-bar">
@@ -52,7 +52,7 @@ App.views.gastos = (function () {
         <input type="date" class="input" data-field="dataFim" value="${f.dataFim}" title="Vencimento até" />
 
         <details class="filter-dropdown">
-          <summary class="button button--ghost">Categoria ${f.categorias.length ? `(${f.categorias.length})` : ''}</summary>
+          <summary class="button button--ghost button--icon">${App.icons.get('funnel')} Categoria ${f.categorias.length ? `(${f.categorias.length})` : ''}</summary>
           <div class="filter-dropdown__panel">
             ${categorias.map((c) => `
               <label class="checkbox-row">
@@ -111,7 +111,7 @@ App.views.gastos = (function () {
               ${utils.escapeHtml(g.descricao)}
               ${g.observacao ? `<span class="data-list__obs">${utils.escapeHtml(g.observacao)}</span>` : ''}
             </span>
-            <span>${utils.escapeHtml(state.categoriaNome(g.categoriaId))}</span>
+            <span class="data-list__categoria"><span class="cat-icon">${App.icons.forCategoria(state.categoriaNome(g.categoriaId))}</span>${utils.escapeHtml(state.categoriaNome(g.categoriaId))}</span>
             <span>${g.tipo === 'fixo' ? 'Fixo' : 'Variável'}</span>
             <span class="valor-mono">${utils.formatCurrency(state.valorLiquido(g))}</span>
             <span>${utils.formatDate(g.vencimento)}</span>
@@ -119,10 +119,10 @@ App.views.gastos = (function () {
             <span><span class="pill pill--${statusEfetivo}">${utils.statusLabel(statusEfetivo)}</span></span>
             <span class="data-list__acoes">
               ${g.status === 'pendente'
-                ? `<button type="button" class="icon-button" title="Marcar como pago" data-action="pagar" data-id="${g.id}">✓</button>`
-                : `<button type="button" class="icon-button" title="Marcar como pendente" data-action="rependente" data-id="${g.id}">↺</button>`}
-              <button type="button" class="icon-button" title="Editar" data-action="editar" data-id="${g.id}">✎</button>
-              <button type="button" class="icon-button" title="Excluir" data-action="excluir" data-id="${g.id}">🗑</button>
+                ? `<button type="button" class="icon-button" title="Marcar como pago" data-action="pagar" data-id="${g.id}">${App.icons.get('check')}</button>`
+                : `<button type="button" class="icon-button" title="Marcar como pendente" data-action="rependente" data-id="${g.id}">${App.icons.get('undo')}</button>`}
+              <button type="button" class="icon-button" title="Editar" data-action="editar" data-id="${g.id}">${App.icons.get('pencil')}</button>
+              <button type="button" class="icon-button" title="Excluir" data-action="excluir" data-id="${g.id}">${App.icons.get('trash')}</button>
             </span>
           </div>`;
         }).join('')}

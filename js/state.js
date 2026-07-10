@@ -174,19 +174,12 @@ App.state = (function () {
     notify();
   }
 
-  // Receita do mês = lançamentos manuais + notas fiscais emitidas naquele mês.
-  // Emitir uma NF já é, por si só, faturar — não faz sentido lançar de novo
-  // como receita manual, então a nota entra automaticamente na conta.
-  function receitaManualDoMes(mesReferencia) {
-    return utils.sum(data.receitas.filter((r) => r.mesReferencia === mesReferencia), (r) => r.valor);
-  }
-
-  function receitaNfDoMes(mesReferencia) {
-    return utils.sum(data.notasFiscais.filter((n) => n.mesEmissao === mesReferencia), (n) => n.valor);
-  }
-
+  // Receita do mês vem só dos lançamentos manuais de Receitas. As notas
+  // fiscais são um controle à parte (faturamento emitido) e NÃO entram
+  // automaticamente aqui — o usuário lança a receita quando quer, o que
+  // permite programar gastos de um mês antes de ter emitido a nota dele.
   function receitaDoMes(mesReferencia) {
-    return receitaManualDoMes(mesReferencia) + receitaNfDoMes(mesReferencia);
+    return utils.sum(data.receitas.filter((r) => r.mesReferencia === mesReferencia), (r) => r.valor);
   }
 
   // ---------------------------------------------------------------------
@@ -360,15 +353,10 @@ App.state = (function () {
   function resumoAnual(ano) {
     const lista = gastosDoAno(ano);
     const t = totais(lista);
-    const receitaManualAnual = utils.sum(
+    const receitaAnual = utils.sum(
       data.receitas.filter((r) => utils.yearFromMonthRef(r.mesReferencia) === ano),
       (r) => r.valor
     );
-    const receitaNfAnual = utils.sum(
-      data.notasFiscais.filter((n) => utils.yearFromMonthRef(n.mesEmissao) === ano),
-      (n) => n.valor
-    );
-    const receitaAnual = receitaManualAnual + receitaNfAnual;
     return {
       ano,
       receitaAnual,
@@ -423,7 +411,7 @@ App.state = (function () {
     init, getData, getUI, setUI, subscribe, replaceData, resetAll, getTema, setTema,
     listCategorias, categoriaNome, addCategoria,
     addGasto, updateGasto, deleteGasto, marcarGastoPago, marcarGastoPendente,
-    addReceita, updateReceita, deleteReceita, receitaDoMes, receitaManualDoMes, receitaNfDoMes,
+    addReceita, updateReceita, deleteReceita, receitaDoMes,
     addNotaFiscal, updateNotaFiscal, deleteNotaFiscal,
     getFiltros, setFiltro, limparFiltros, statusEfetivo, gastosFiltrados,
     valorLiquido, gastosDoMes, gastosDoAno, totais, gastosPorCategoria,
