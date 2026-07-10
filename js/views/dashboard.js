@@ -63,8 +63,13 @@ App.views.dashboard = (function () {
         </div>
       </div>
 
+      <section class="dashboard-hero">
+        <div class="dashboard-hero__label">Saldo do mês · ${utils.escapeHtml(utils.monthRefToLabel(mes))}</div>
+        <div class="dashboard-hero__value valor--${saldoSentido}"><span data-countup="dashboard:saldo" data-value="${resumo.saldo}"></span></div>
+        <div class="dashboard-hero__sub">Receita ${utils.formatCurrency(resumo.receita)} · Gasto ${utils.formatCurrency(resumo.totalAposDescontos)}</div>
+      </section>
+
       <section class="stat-grid">
-        ${statTileCountUp('Saldo do mês', { chave: 'dashboard:saldo', valor: resumo.saldo, wrapClass: `valor--${saldoSentido}` }, { icon: 'wallet', iconTone: saldoSentido === 'positivo' ? 'good' : 'critical' })}
         ${statTileCountUp('Receita do mês', { chave: 'dashboard:receita', valor: resumo.receita }, { icon: 'trending-up', iconTone: 'good' })}
         ${statTileCountUp('Total gasto', { chave: 'dashboard:totalGasto', valor: resumo.totalAposDescontos }, {
           delta: `${utils.formatPercent(resumo.percentPago, 0)} pago`, deltaSentido: 'neutro', icon: 'trending-down', iconTone: 'accent',

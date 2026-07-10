@@ -13,6 +13,7 @@
   --page-bg: #f5f5f7;
   --card-bg: #ffffff;
   --sidebar-bg: #ffffff;
+  --glass-bg: rgba(255, 255, 255, 0.72);
   --overlay-bg: rgba(0, 0, 0, 0.35);
   --text-primary: #1d1d1f;
   --text-secondary: #6e6e73;
@@ -71,6 +72,7 @@
     --page-bg: #000000;
     --card-bg: #1c1c1e;
     --sidebar-bg: #161618;
+    --glass-bg: rgba(22, 22, 24, 0.72);
     --overlay-bg: rgba(0, 0, 0, 0.55);
     --text-primary: #f5f5f7;
     --text-secondary: #a1a1a6;
@@ -115,6 +117,7 @@
   --page-bg: #000000;
   --card-bg: #1c1c1e;
   --sidebar-bg: #161618;
+  --glass-bg: rgba(22, 22, 24, 0.72);
   --overlay-bg: rgba(0, 0, 0, 0.55);
   --text-primary: #f5f5f7;
   --text-secondary: #a1a1a6;
@@ -165,6 +168,7 @@
   --page-bg: #e9f3fb;
   --card-bg: #ffffff;
   --sidebar-bg: #f1f8fd;
+  --glass-bg: rgba(241, 248, 253, 0.72);
   --overlay-bg: rgba(8, 40, 60, 0.35);
   --text-primary: #0f2c3d;
   --text-secondary: #3f6172;
@@ -210,6 +214,7 @@
     --page-bg: #041017;
     --card-bg: #0e2734;
     --sidebar-bg: #0a1e29;
+    --glass-bg: rgba(10, 30, 41, 0.72);
     --overlay-bg: rgba(0, 0, 0, 0.55);
     --text-primary: #e9f6fd;
     --text-secondary: #a0bfce;
@@ -257,6 +262,8 @@
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body {
   margin: 0;
   font-family: var(--font);
@@ -267,7 +274,7 @@ body {
 }
 body.no-scroll { overflow: hidden; }
 h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
-h1 { font-size: 28px; }
+h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.025em; }
 h2 { font-size: 17px; margin-bottom: var(--space-4); display: flex; align-items: center; gap: 8px; }
 .h2-icon { display: inline-flex; }
 .h2-icon .icon { width: 18px; height: 18px; vertical-align: 0; }
@@ -292,12 +299,26 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
   flex-shrink: 0;
   background: var(--sidebar-bg);
   border-right: 1px solid var(--border);
+  /* Vidro fosco (frosted glass) — assinatura visual da Apple. Fica atrás do
+     conteúdo que rola por baixo. Fallback: fundo sólido em navegadores sem
+     backdrop-filter (regra @supports abaixo). */
   padding: var(--space-5) var(--space-4);
   display: flex;
   flex-direction: column;
   position: sticky;
   top: 0;
   height: 100vh;
+}
+
+/* Vidro fosco onde há conteúdo rolando por baixo/atrás: barra lateral, barra
+   inferior (mobile) e cabeçalho fixo do modal. Só entra se o navegador
+   suportar backdrop-filter — senão fica o fundo sólido definido acima. */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .sidebar, .tabbar, .modal-header {
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+  }
 }
 
 .sidebar__brand {
@@ -394,6 +415,19 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
   gap: var(--space-3);
   margin-bottom: var(--space-5);
 }
+
+/* Número-herói do Painel: um foco só, grande, sobre a faixa de brilho — a
+   hierarquia "uma coisa importa" que a Apple usa (e o guia de dataviz chama
+   de hero figure). Fundo transparente pra deixar o glow aparecer atrás. */
+.dashboard-hero { margin-bottom: var(--space-6); }
+.dashboard-hero__label { font-size: 14px; color: var(--text-secondary); margin-bottom: 4px; }
+.dashboard-hero__value {
+  font-size: clamp(40px, 8vw, 56px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+.dashboard-hero__sub { font-size: 14px; color: var(--text-secondary); margin-top: 8px; }
 
 .month-switcher, .month-switcher--standalone {
   display: flex;
