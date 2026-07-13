@@ -528,8 +528,11 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 }
 .card-grid--2 { grid-template-columns: 1fr 1fr; }
 .card-grid--2 .card { margin-bottom: 0; }
+/* Split: card principal (categorias) largo + card compacto (donut) estreito. */
+.card-grid--split { grid-template-columns: 1.7fr 1fr; align-items: start; }
+.card-grid--split .card { margin-bottom: 0; }
 @media (max-width: 880px) {
-  .card-grid--2 { grid-template-columns: 1fr; }
+  .card-grid--2, .card-grid--split { grid-template-columns: 1fr; }
 }
 
 .stat-grid {
@@ -547,12 +550,19 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
   transition: transform var(--transition), box-shadow var(--transition);
 }
 .stat-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+/* Linha de topo: rótulo à esquerda, ícone à direita. O ícone não fica mais
+   sobreposto ao valor, então valores longos usam a largura toda sem colidir. */
+.stat-tile__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: 8px;
+}
 .stat-tile__icon {
-  position: absolute;
-  top: var(--space-4);
-  right: var(--space-4);
-  width: 34px;
-  height: 34px;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
   border-radius: 10px;
   display: inline-flex;
   align-items: center;
@@ -560,16 +570,57 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
   background: var(--track-bg);
   color: var(--text-secondary);
 }
-.stat-tile__icon .icon { width: 19px; height: 19px; vertical-align: 0; }
+.stat-tile__icon .icon { width: 18px; height: 18px; vertical-align: 0; }
 .stat-tile__icon--good { background: var(--status-good-bg); color: var(--status-good); }
 .stat-tile__icon--critical { background: var(--status-critical-bg); color: var(--status-critical); }
 .stat-tile__icon--accent { background: var(--accent-wash); color: var(--accent); }
-.stat-tile__label { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; padding-right: 40px; }
-.stat-tile__value { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+.stat-tile__label { font-size: 13px; color: var(--text-secondary); }
+/* O valor encolhe um pouco se for muito grande, pra não estourar o card. */
+.stat-tile__value { font-size: clamp(18px, 4.6vw, 22px); font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; overflow-wrap: break-word; }
 .stat-tile__sep { color: var(--text-muted); font-weight: 400; }
 .stat-tile__delta { font-size: 12px; margin-top: 4px; color: var(--text-secondary); }
 .stat-tile__delta--positivo { color: var(--status-good); }
 .stat-tile__delta--negativo { color: var(--status-critical); }
+
+/* Barra de progresso (% pago): trilho + preenchimento com gradiente fixo
+   vermelho -> amarelo -> verde e um brilho que corre por dentro. */
+.progress { margin-top: 12px; }
+.progress__track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--track-bg);
+  overflow: hidden;
+}
+.progress__fill {
+  position: relative;
+  height: 100%;
+  border-radius: 999px;
+  /* Gradiente vermelho -> amarelo -> verde. O background-size é ajustado por
+     JS pra largura do trilho (dashboard.js), então o gradiente fica "ancorado"
+     ao trilho e a barra só revela até o % pago — pouco preenchido mostra só o
+     vermelho, cheio chega ao verde. O 100% aqui é só um fallback. */
+  background: linear-gradient(90deg, #e5484d 0%, #f5a524 45%, #1fb457 100%);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  transition: width 800ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.progress__shine {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.55) 50%, transparent 100%);
+  transform: translateX(-100%);
+  animation: progress-shine 2.4s ease-in-out infinite;
+}
+@keyframes progress-shine {
+  0% { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(100%); }
+}
+.progress__caption { font-size: 12px; color: var(--text-secondary); margin-top: 6px; }
+@media (prefers-reduced-motion: reduce) {
+  .progress__fill { transition: none; }
+  .progress__shine { animation: none; }
+}
 
 .valor--positivo { color: var(--status-good); }
 .valor--negativo { color: var(--status-critical); }
@@ -624,6 +675,39 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 
 .empty-hint { color: var(--text-muted); font-size: 14px; }
 .empty-hint--block { padding: var(--space-5) 0; text-align: center; }
+
+/* ---------------------------------------------------------------------
+   Gráfico de rosca (donut) — Fixo x Variável
+   --------------------------------------------------------------------- */
+.donut-wrap { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); }
+.donut { position: relative; width: 150px; height: 150px; }
+.donut__svg { width: 100%; height: 100%; display: block; animation: donut-in 600ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes donut-in { from { opacity: 0; transform: scale(0.9) rotate(-8deg); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .donut__svg { animation: none; } }
+.donut__center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  pointer-events: none;
+}
+.donut__center-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.donut__center-valor { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.donut-legend { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.donut-legend__item {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.donut-legend__swatch { width: 10px; height: 10px; border-radius: 3px; }
+.donut-legend__label { color: var(--text-primary); }
+.donut-legend__valor { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.donut-legend__pct { color: var(--text-muted); min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
 
 /* ---------------------------------------------------------------------
    Gráfico de linha (evolução mensal)

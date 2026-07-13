@@ -20,12 +20,34 @@ App.views.dashboard = (function () {
     const iconHtml = opts.icon
       ? `<span class="stat-tile__icon stat-tile__icon--${opts.iconTone || 'neutro'}">${App.icons.get(opts.icon)}</span>`
       : '';
+    // O ícone fica numa linha de topo AO LADO do rótulo (não mais sobreposto),
+    // então valores grandes usam a largura toda do card sem colidir com ele.
     return `
       <div class="stat-tile">
-        ${iconHtml}
-        <div class="stat-tile__label">${label}</div>
+        <div class="stat-tile__top">
+          <div class="stat-tile__label">${label}</div>
+          ${iconHtml}
+        </div>
         <div class="stat-tile__value">${value}</div>
         ${deltaHtml}
+        ${opts.footer || ''}
+      </div>`;
+  }
+
+  // Barra de progresso do % pago. O preenchimento é um gradiente fixo
+  // vermelho -> amarelo -> verde (então quanto mais cheia, mais "verde" fica
+  // exposto), com um brilho que corre por dentro. A largura parte de 0 e
+  // cresce até o valor no mount (a transição fica no CSS).
+  function progressoPago(percent) {
+    const pct = utils.clamp(Math.round(percent || 0), 0, 100);
+    return `
+      <div class="progress" title="${pct}% das contas do mês pagas">
+        <div class="progress__track">
+          <div class="progress__fill" style="width:0%;" data-w="${pct}">
+            <span class="progress__shine"></span>
+          </div>
+        </div>
+        <div class="progress__caption">${pct}% pago</div>
       </div>`;
   }
 
@@ -74,7 +96,9 @@ App.views.dashboard = (function () {
         ${statTileCountUp('Total gasto', { chave: 'dashboard:totalGasto', valor: resumo.totalAposDescontos }, {
           delta: `${utils.formatPercent(resumo.percentPago, 0)} pago`, deltaSentido: 'neutro', icon: 'trending-down', iconTone: 'accent',
         })}
-        ${statTile('Pago / Pendente', `<span data-countup="dashboard:pago" data-value="${resumo.totalPago}"></span> <span class="stat-tile__sep">/</span> <span data-countup="dashboard:pendente" data-value="${resumo.totalPendente}"></span>`, { icon: 'check-circle', iconTone: 'good' })}
+        ${statTile('Pago / Pendente', `<span data-countup="dashboard:pago" data-value="${resumo.totalPago}"></span> <span class="stat-tile__sep">/</span> <span data-countup="dashboard:pendente" data-value="${resumo.totalPendente}"></span>`, {
+          icon: 'check-circle', iconTone: 'good', footer: progressoPago(resumo.percentPago),
+        })}
         ${resumo.percentRendaComprometida == null
           ? statTile('Renda comprometida', '—', { icon: 'gauge', iconTone: 'accent' })
           : statTileCountUp('Renda comprometida', { chave: 'dashboard:rendaComprometida', valor: resumo.percentRendaComprometida, fmt: 'percent' }, { icon: 'gauge', iconTone: 'accent' })}
@@ -83,14 +107,14 @@ App.views.dashboard = (function () {
         })}
       </section>
 
-      <section class="card-grid card-grid--2">
+      <section class="card-grid card-grid--split">
         <div class="card">
           <h2>Gastos por categoria</h2>
           <div class="bar-list" data-role="categoria"></div>
         </div>
         <div class="card">
           <h2>Fixo x Variável</h2>
-          <div class="bar-list" data-role="fixo-variavel"></div>
+          <div class="donut-wrap" data-role="fixo-variavel"></div>
         </div>
       </section>
 
@@ -121,13 +145,30 @@ App.views.dashboard = (function () {
 
     // Gastos por categoria (renderizado à parte por usar o componente de barras)
     App.charts.renderBarList(container.querySelector('[data-role="categoria"]'), porCategoria, { icons: true });
-    App.charts.renderBarList(container.querySelector('[data-role="fixo-variavel"]'), fixoVariavel);
+    // Fixo x Variável: donut compacto (sempre 2 fatias, part-to-whole).
+    App.charts.renderDonut(container.querySelector('[data-role="fixo-variavel"]'), [
+      { label: 'Fixo', valor: fixoVariavel[0].valor, cor: 'var(--chart-cat-1)' },
+      { label: 'Variável', valor: fixoVariavel[1].valor, cor: 'var(--chart-cat-3)' },
+    ]);
     App.charts.renderLineChart(container.querySelector('[data-role="evolucao"]'), {
       labels: evolucao.labels,
       series: [
         { key: 'receita', label: 'Receita', values: evolucao.receitas },
         { key: 'despesa', label: 'Despesa', values: evolucao.despesas },
       ],
+    });
+
+    // Anima a(s) barra(s) de progresso: parte de 0% e cresce até o valor
+    // (a transição em si é do CSS). Sem isso a barra ficaria sempre vazia.
+    // Ancoramos o gradiente na LARGURA DO TRILHO (não no preenchimento), assim
+    // o vermelho fica sempre no começo e o verde no fim, independente da
+    // largura do card — e a barra apenas "revela" o gradiente até o % pago.
+    requestAnimationFrame(() => {
+      container.querySelectorAll('.progress__fill').forEach((el) => {
+        const trilho = el.parentElement;
+        if (trilho) el.style.backgroundSize = `${trilho.clientWidth}px 100%`;
+        el.style.width = el.dataset.w + '%';
+      });
     });
 
     App.animate.wireCountUps(container);

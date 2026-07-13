@@ -77,6 +77,64 @@ App.charts = (function () {
   }
 
   // -----------------------------------------------------------------------
+  // Gráfico de rosca (donut) — usado no Fixo x Variável, que é sempre
+  // part-to-whole de 2 fatias. Cada fatia é um arco desenhado com
+  // stroke-dasharray; anima "crescendo" via stroke-dashoffset no mount.
+  // segments: [{ label, valor, cor }]  (cor = string CSS, ex.: var(--...))
+  // -----------------------------------------------------------------------
+
+  function renderDonut(container, segments, opts) {
+    opts = opts || {};
+    const total = utils.sum(segments, (s) => s.valor);
+    const size = 132;      // viewBox
+    const stroke = 18;
+    const r = (size - stroke) / 2;
+    const cx = size / 2;
+    const C = 2 * Math.PI * r;
+
+    if (total <= 0) {
+      container.innerHTML = '<p class="empty-hint">Sem dados para o período selecionado.</p>';
+      return;
+    }
+
+    // Monta os arcos. Cada fatia é desenhada com stroke-dasharray (comprimento
+    // do arco + resto vazio) e girada pra começar onde a anterior terminou.
+    // A entrada animada é do donut inteiro (fade + escala, no CSS), evitando
+    // matemática frágil de dashoffset por fatia.
+    let acc = 0;
+    const arcos = segments.map((s) => {
+      const len = (s.valor / total) * C;
+      const rot = (acc / total) * 360 - 90; // começa no topo
+      acc += s.valor;
+      return `<circle cx="${cx}" cy="${cx}" r="${r}"
+        fill="none" stroke="${s.cor}" stroke-width="${stroke}" stroke-linecap="butt"
+        transform="rotate(${rot} ${cx} ${cx})"
+        stroke-dasharray="${len} ${C - len}" />`;
+    }).join('');
+
+    const legenda = segments.map((s) => `
+      <div class="donut-legend__item">
+        <span class="donut-legend__swatch" style="background:${s.cor};"></span>
+        <span class="donut-legend__label">${utils.escapeHtml(s.label)}</span>
+        <span class="donut-legend__valor">${utils.formatCurrency(s.valor)}</span>
+        <span class="donut-legend__pct">${utils.formatPercent((s.valor / total) * 100, 0)}</span>
+      </div>`).join('');
+
+    container.innerHTML = `
+      <div class="donut">
+        <svg class="donut__svg" viewBox="0 0 ${size} ${size}" role="img" aria-label="Fixo x Variável">
+          <circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="var(--track-bg)" stroke-width="${stroke}" />
+          ${arcos}
+        </svg>
+        <div class="donut__center">
+          <span class="donut__center-label">Total</span>
+          <span class="donut__center-valor">${utils.formatCurrency(total)}</span>
+        </div>
+      </div>
+      <div class="donut-legend">${legenda}</div>`;
+  }
+
+  // -----------------------------------------------------------------------
   // Gráfico de linha (evolução mensal receitas x despesas)
   // -----------------------------------------------------------------------
 
@@ -253,5 +311,5 @@ App.charts = (function () {
     hoverLayer.addEventListener('pointerleave', hide);
   }
 
-  return { foldTop, renderBarList, renderLineChart };
+  return { foldTop, renderBarList, renderLineChart, renderDonut };
 })();
