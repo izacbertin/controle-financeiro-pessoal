@@ -332,20 +332,47 @@ App.state = (function () {
       .sort((a, b) => (a.vencimento < b.vencimento ? -1 : 1));
   }
 
+  // Todos os meses que têm algum lançamento (receita ou gasto). Usado pelo
+  // saldo acumulado pra saber o que existe "antes" do mês consultado.
+  function mesesComMovimento() {
+    const set = new Set();
+    data.gastos.forEach((g) => set.add(g.mesReferencia));
+    data.receitas.forEach((r) => set.add(r.mesReferencia));
+    return Array.from(set).filter(Boolean);
+  }
+
+  // Saldo que entra no mês, acumulado de TODOS os meses anteriores: para cada
+  // mês < mesReferencia soma (receita lançada − despesa líquida) e acumula.
+  // É um saldo corrente de verdade — carrega sobra (positivo) E estouro
+  // (negativo), pra nunca mostrar dinheiro que não existe. Strings "YYYY-MM"
+  // comparam corretamente em ordem cronológica.
+  function saldoAcumuladoAntesDe(mesReferencia) {
+    return mesesComMovimento()
+      .filter((m) => m < mesReferencia)
+      .reduce((acc, m) => acc + (receitaDoMes(m) - totais(gastosDoMes(m)).totalLiquido), 0);
+  }
+
   function resumoMensal(mesReferencia) {
     const lista = gastosDoMes(mesReferencia);
     const t = totais(lista);
-    const receita = receitaDoMes(mesReferencia);
+    const receitaLancada = receitaDoMes(mesReferencia);
+    const saldoAnterior = saldoAcumuladoAntesDe(mesReferencia);
+    // Receita "efetiva" do mês = o que foi lançado + o que sobrou/faltou antes.
+    const receitaComSaldo = receitaLancada + saldoAnterior;
     return {
       mesReferencia,
-      receita,
+      receita: receitaLancada,          // só o que foi lançado no mês
+      saldoAnterior,                    // carregado de meses anteriores (+/−)
+      receitaComSaldo,                  // receita efetiva (lançada + saldo anterior)
       despesasTotais: t.totalBruto,
       totalAposDescontos: t.totalLiquido,
       totalPago: t.totalPago,
       totalPendente: t.totalPendente,
       percentPago: t.percentPago,
-      saldo: receita - t.totalLiquido,
-      percentRendaComprometida: receita > 0 ? (t.totalLiquido / receita) * 100 : null,
+      saldo: receitaComSaldo - t.totalLiquido,   // saldo corrente ao fim do mês
+      // "Renda comprometida" continua sobre a renda REAL lançada (o saldo
+      // acumulado é dinheiro guardado, não renda nova).
+      percentRendaComprometida: receitaLancada > 0 ? (t.totalLiquido / receitaLancada) * 100 : null,
       quantidade: t.quantidade,
     };
   }

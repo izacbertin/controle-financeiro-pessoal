@@ -257,6 +257,104 @@
 }
 
 /* ---------------------------------------------------------------------
+   Tema Rick and Morty — referência ao "portal": verde-portal (#97ce4c) como
+   destaque + brilho ciano. Variante clara (laboratório) e escura (espaço),
+   seguindo o aparelho. A paleta dos gráficos segue a validada; muda só
+   superfície/texto/destaque. (Cores base pesquisadas na web — ver resposta.)
+   --------------------------------------------------------------------- */
+:root[data-theme="rick"] {
+  --page-bg: #eef6e6;
+  --card-bg: #ffffff;
+  --sidebar-bg: #f2f8ec;
+  --glass-bg: rgba(242, 248, 236, 0.72);
+  --overlay-bg: rgba(20, 40, 12, 0.35);
+  --text-primary: #17251a;
+  --text-secondary: #4c5c48;
+  --text-muted: #8a9a83;
+  --border: rgba(60, 110, 40, 0.14);
+  --track-bg: #e3eed5;
+  --shadow-sm: 0 1px 2px rgba(40, 70, 20, 0.06);
+  --shadow-md: 0 8px 26px rgba(40, 70, 20, 0.14);
+
+  --accent: #4f9a1f;
+  --accent-contrast: #ffffff;
+  --accent-wash: rgba(79, 154, 31, 0.13);
+  --accent-shadow: rgba(79, 154, 31, 0.3);
+
+  --hero-grad-1: rgba(151, 206, 76, 0.22);
+  --hero-grad-2: rgba(53, 201, 221, 0.16);
+
+  --status-good: #0ca30c;
+  --status-good-bg: rgba(12, 163, 12, 0.12);
+  --status-warning: #a86400;
+  --status-warning-bg: rgba(250, 178, 25, 0.18);
+  --status-critical: #d03b3b;
+  --status-critical-bg: rgba(208, 59, 59, 0.12);
+
+  --chart-cat-1: #2a78d6;
+  --chart-cat-2: #1baf7a;
+  --chart-cat-3: #eda100;
+  --chart-cat-4: #008300;
+  --chart-cat-5: #4a3aa7;
+  --chart-cat-6: #e34948;
+  --chart-cat-7: #e87ba4;
+  --chart-outras: #94a487;
+
+  --series-receita: #4f9a1f;
+  --series-despesa: #e34948;
+
+  --chart-grid: #dbe8ca;
+  --chart-axis: #8a9a83;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="rick"] {
+    --page-bg: #080d0a;
+    --card-bg: #131c15;
+    --sidebar-bg: #0d150f;
+    --glass-bg: rgba(13, 21, 15, 0.72);
+    --overlay-bg: rgba(0, 0, 0, 0.6);
+    --text-primary: #eafff0;
+    --text-secondary: #a6c7ab;
+    --text-muted: #6f8a76;
+    --border: rgba(151, 206, 76, 0.18);
+    --track-bg: #1c2a1f;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.55);
+
+    --accent: #97ce4c;
+    --accent-contrast: #06210a;
+    --accent-wash: rgba(151, 206, 76, 0.18);
+    --accent-shadow: rgba(151, 206, 76, 0.45);
+
+    --hero-grad-1: rgba(151, 206, 76, 0.26);
+    --hero-grad-2: rgba(53, 201, 221, 0.22);
+
+    --status-good: #32d74b;
+    --status-good-bg: rgba(50, 215, 75, 0.16);
+    --status-warning: #fab219;
+    --status-warning-bg: rgba(250, 178, 25, 0.16);
+    --status-critical: #ff6961;
+    --status-critical-bg: rgba(255, 105, 97, 0.16);
+
+    --chart-cat-1: #3987e5;
+    --chart-cat-2: #199e70;
+    --chart-cat-3: #c98500;
+    --chart-cat-4: #2ea62e;
+    --chart-cat-5: #9085e9;
+    --chart-cat-6: #e66767;
+    --chart-cat-7: #d55181;
+    --chart-outras: #6f8a76;
+
+    --series-receita: #97ce4c;
+    --series-despesa: #e66767;
+
+    --chart-grid: #22331f;
+    --chart-axis: #6f8a76;
+  }
+}
+
+/* ---------------------------------------------------------------------
    Reset & base
    --------------------------------------------------------------------- */
 
@@ -458,6 +556,15 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
   transition: transform var(--transition);
 }
 
+/* No tema Rick and Morty, o portal do botão de tema gira devagar (só enredo). */
+:root[data-theme="rick"] [data-role="tema-icone"] .icon {
+  animation: portal-spin 9s linear infinite;
+}
+@keyframes portal-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="rick"] [data-role="tema-icone"] .icon { animation: none; }
+}
+
 /* ---------------------------------------------------------------------
    Botões
    --------------------------------------------------------------------- */
@@ -581,6 +688,10 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 .stat-tile__delta { font-size: 12px; margin-top: 4px; color: var(--text-secondary); }
 .stat-tile__delta--positivo { color: var(--status-good); }
 .stat-tile__delta--negativo { color: var(--status-critical); }
+.stat-tile__note { font-size: 11.5px; margin-top: 6px; color: var(--text-muted); line-height: 1.35; }
+.stat-tile__note--good { color: var(--status-good); }
+.stat-tile__note--critical { color: var(--status-critical); }
+.dashboard-hero__carry { color: var(--accent); font-weight: 500; }
 
 /* Barra de progresso (% pago): trilho + preenchimento com gradiente fixo
    vermelho -> amarelo -> verde e um brilho que corre por dentro. */

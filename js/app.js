@@ -13,15 +13,14 @@
     { view: 'gastos', label: 'Gastos', icon: 'list' },
     { view: 'receitas', label: 'Receitas', icon: 'trending-up' },
     { view: 'notasFiscais', label: 'Notas fiscais', icon: 'file-text' },
-    { view: 'consolidado', label: 'Consolidado', icon: 'bar-chart' },
   ];
 
   // Ciclo de temas: Automático -> Claro -> Escuro -> Oceano -> (volta).
   // "sistema" e "oceano" seguem o claro/escuro do aparelho; "claro"/"escuro"
   // são fixos. (Ver as variáveis de cor em css/styles.css.)
-  const TEMA_CICLO = { sistema: 'claro', claro: 'escuro', escuro: 'oceano', oceano: 'sistema' };
-  const TEMA_ICONE = { sistema: 'contrast', claro: 'sun', escuro: 'moon', oceano: 'waves' };
-  const TEMA_LABEL = { sistema: 'Automático', claro: 'Claro', escuro: 'Escuro', oceano: 'Oceano' };
+  const TEMA_CICLO = { sistema: 'claro', claro: 'escuro', escuro: 'oceano', oceano: 'rick', rick: 'sistema' };
+  const TEMA_ICONE = { sistema: 'contrast', claro: 'sun', escuro: 'moon', oceano: 'waves', rick: 'portal' };
+  const TEMA_LABEL = { sistema: 'Automático', claro: 'Claro', escuro: 'Escuro', oceano: 'Oceano', rick: 'Rick and Morty' };
   let ultimaViewRenderizada = null;
 
   function navHtml(activeView, extraClass) {
@@ -59,6 +58,7 @@
     // variante (por isso oceano tem versão clara e escura automaticamente).
     if (tema === 'sistema') delete document.documentElement.dataset.theme;
     else if (tema === 'oceano') document.documentElement.dataset.theme = 'oceano';
+    else if (tema === 'rick') document.documentElement.dataset.theme = 'rick';
     else document.documentElement.dataset.theme = tema === 'escuro' ? 'dark' : 'light';
     const icone = document.querySelector('[data-role="tema-icone"]');
     const label = document.querySelector('[data-role="tema-label"]');

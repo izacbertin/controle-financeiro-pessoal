@@ -74,6 +74,16 @@ App.views.dashboard = (function () {
     const variacaoTexto = variacao == null ? '—' : `${variacao >= 0 ? '▲' : '▼'} ${Math.abs(variacao).toFixed(1)}% vs mês anterior`;
     const variacaoSentido = variacao == null ? 'neutro' : (variacao > 0 ? 'negativo' : 'positivo');
 
+    // Saldo que veio de meses anteriores (sobra ou estouro). Quando existe,
+    // ele é somado à receita efetiva do mês e mostramos a observação.
+    const temSaldoAnterior = Math.abs(resumo.saldoAnterior) >= 0.005;
+    const saldoAnteriorNota = temSaldoAnterior
+      ? `${resumo.saldoAnterior >= 0 ? '+' : '−'}${utils.formatCurrency(Math.abs(resumo.saldoAnterior))} de meses anteriores`
+      : '';
+    const receitaFooter = temSaldoAnterior
+      ? `<div class="stat-tile__note">${utils.formatCurrency(resumo.receita)} lançada · <span class="stat-tile__note--${resumo.saldoAnterior >= 0 ? 'good' : 'critical'}">${saldoAnteriorNota}</span></div>`
+      : '';
+
     container.innerHTML = `
       <div class="dashboard-hero-glow" aria-hidden="true"></div>
       <div class="view-header">
@@ -88,11 +98,11 @@ App.views.dashboard = (function () {
       <section class="dashboard-hero">
         <div class="dashboard-hero__label">Saldo do mês · ${utils.escapeHtml(utils.monthRefToLabel(mes))}</div>
         <div class="dashboard-hero__value valor--${saldoSentido}"><span data-countup="dashboard:saldo" data-value="${resumo.saldo}"></span></div>
-        <div class="dashboard-hero__sub">Receita ${utils.formatCurrency(resumo.receita)} · Gasto ${utils.formatCurrency(resumo.totalAposDescontos)}</div>
+        <div class="dashboard-hero__sub">Receita ${utils.formatCurrency(resumo.receitaComSaldo)} · Gasto ${utils.formatCurrency(resumo.totalAposDescontos)}${temSaldoAnterior ? ` · <span class="dashboard-hero__carry">${saldoAnteriorNota}</span>` : ''}</div>
       </section>
 
       <section class="stat-grid">
-        ${statTileCountUp('Receita do mês', { chave: 'dashboard:receita', valor: resumo.receita }, { icon: 'trending-up', iconTone: 'good' })}
+        ${statTileCountUp('Receita do mês', { chave: 'dashboard:receita', valor: resumo.receitaComSaldo }, { icon: 'trending-up', iconTone: 'good', footer: receitaFooter })}
         ${statTileCountUp('Total gasto', { chave: 'dashboard:totalGasto', valor: resumo.totalAposDescontos }, {
           delta: `${utils.formatPercent(resumo.percentPago, 0)} pago`, deltaSentido: 'neutro', icon: 'trending-down', iconTone: 'accent',
         })}

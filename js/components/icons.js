@@ -51,6 +51,8 @@ App.icons = (function () {
     moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4 7 7 0 1 0 20 14.5z"/>',
     waves: '<path d="M3 7q3 -3 6 0t6 0 6 0"/><path d="M3 12q3 -3 6 0t6 0 6 0"/><path d="M3 17q3 -3 6 0t6 0 6 0"/>',
     contrast: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/>',
+    // Portal (referência ao Rick and Morty) — espiral concêntrica.
+    portal: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="2"/>',
 
     // Categorias
     'cat-alimentacao': '<path d="M6 12v9"/><path d="M4.5 3v3a1.5 1.5 0 0 0 3 0V3"/><path d="M6 6v6"/><path d="M16.6 3c-1.3 1.9-1.6 5.1-1.6 7.2 0 1.2.8 2 1.9 2"/><path d="M16.9 12.2V21"/>',
