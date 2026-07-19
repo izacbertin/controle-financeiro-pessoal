@@ -11,7 +11,13 @@
     obrigado a baixar a versão nova em vez de usar a antiga em cache.
     >>> Ao publicar uma atualização, suba o número em TODAS as linhas. <<<
   -->
-  <link rel="stylesheet" href="css/styles.css?v=10" />
+  <!-- Fontes sci-fi usadas APENAS no tema Star Wars (Orbitron p/ títulos e
+       números, Rajdhani p/ texto). Só carregam com internet; nos outros temas
+       e offline o app usa a fonte do sistema normalmente. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" />
+  <link rel="stylesheet" href="css/styles.css?v=11" />
 </head>
 <body>
   <div id="app-shell"></div>
@@ -21,18 +27,18 @@
   <input type="file" id="import-file-input" accept="application/json" hidden />
 
   <!-- Ordem importa: cada arquivo assume que os anteriores já rodaram. -->
-  <script src="js/utils.js?v=10"></script>
-  <script src="js/storage.js?v=10"></script>
-  <script src="js/state.js?v=10"></script>
-  <script src="js/charts.js?v=10"></script>
-  <script src="js/components/icons.js?v=10"></script>
-  <script src="js/components/modal.js?v=10"></script>
-  <script src="js/components/toast.js?v=10"></script>
-  <script src="js/components/animate.js?v=10"></script>
-  <script src="js/views/dashboard.js?v=10"></script>
-  <script src="js/views/gastos.js?v=10"></script>
-  <script src="js/views/receitas.js?v=10"></script>
-  <script src="js/views/nfs.js?v=10"></script>
-  <script src="js/app.js?v=10"></script>
+  <script src="js/utils.js?v=11"></script>
+  <script src="js/storage.js?v=11"></script>
+  <script src="js/state.js?v=11"></script>
+  <script src="js/charts.js?v=11"></script>
+  <script src="js/components/icons.js?v=11"></script>
+  <script src="js/components/modal.js?v=11"></script>
+  <script src="js/components/toast.js?v=11"></script>
+  <script src="js/components/animate.js?v=11"></script>
+  <script src="js/views/dashboard.js?v=11"></script>
+  <script src="js/views/gastos.js?v=11"></script>
+  <script src="js/views/receitas.js?v=11"></script>
+  <script src="js/views/nfs.js?v=11"></script>
+  <script src="js/app.js?v=11"></script>
 </body>
 </html>

@@ -22,8 +22,11 @@ App.views.dashboard = (function () {
       : '';
     // O ícone fica numa linha de topo AO LADO do rótulo (não mais sobreposto),
     // então valores grandes usam a largura toda do card sem colidir com ele.
+    // opts.key gera uma classe (ex.: stat-tile--receita) que temas usam pra
+    // enfeitar cards específicos (ex.: personagens do tema Star Wars).
+    const keyClass = opts.key ? ` stat-tile--${opts.key}` : '';
     return `
-      <div class="stat-tile">
+      <div class="stat-tile${keyClass}">
         <div class="stat-tile__top">
           <div class="stat-tile__label">${label}</div>
           ${iconHtml}
@@ -161,15 +164,15 @@ App.views.dashboard = (function () {
       </div>
 
       <section class="dashboard-hero">
-        <div class="dashboard-hero__label">Saldo do mês · ${utils.escapeHtml(utils.monthRefToLabel(mes))}</div>
+        <div class="dashboard-hero__label"><span class="hero-label--default">Saldo do mês</span><span class="hero-label--sw">Painel de Comando</span> · ${utils.escapeHtml(utils.monthRefToLabel(mes))}</div>
         <div class="dashboard-hero__value valor--${saldoSentido}"><span data-countup="dashboard:saldo" data-value="${resumo.saldo}"></span></div>
         <div class="dashboard-hero__sub">Receita ${utils.formatCurrency(resumo.receitaComSaldo)} · Gasto ${utils.formatCurrency(resumo.totalAposDescontos)}${temSaldoAnterior ? ` · <span class="dashboard-hero__carry">${saldoAnteriorNota}</span>` : ''}</div>
       </section>
 
       <section class="stat-grid">
-        ${statTileCountUp('Receita do mês', { chave: 'dashboard:receita', valor: resumo.receitaComSaldo }, { icon: 'trending-up', iconTone: 'good', footer: receitaFooter })}
+        ${statTileCountUp('Receita do mês', { chave: 'dashboard:receita', valor: resumo.receitaComSaldo }, { icon: 'trending-up', iconTone: 'good', footer: receitaFooter, key: 'receita' })}
         ${statTileCountUp('Total gasto', { chave: 'dashboard:totalGasto', valor: resumo.totalAposDescontos }, {
-          delta: `${utils.formatPercent(resumo.percentPago, 0)} pago`, deltaSentido: 'neutro', icon: 'trending-down', iconTone: 'accent',
+          delta: `${utils.formatPercent(resumo.percentPago, 0)} pago`, deltaSentido: 'neutro', icon: 'trending-down', iconTone: 'accent', key: 'gasto',
         })}
         ${statTile('Pago / Pendente', `<span data-countup="dashboard:pago" data-value="${resumo.totalPago}"></span> <span class="stat-tile__sep">/</span> <span data-countup="dashboard:pendente" data-value="${resumo.totalPendente}"></span>`, {
           icon: 'check-circle', iconTone: 'good', footer: progressoPago(resumo.percentPago),

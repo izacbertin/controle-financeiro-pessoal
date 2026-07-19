@@ -363,16 +363,16 @@
    topo, títulos vermelhos) vêm nas regras "scoped" mais abaixo.
    --------------------------------------------------------------------- */
 :root[data-theme="starwars"] {
-  --page-bg: #050608;
-  --card-bg: #0d0f13;
-  --sidebar-bg: #08090c;
-  --glass-bg: rgba(8, 9, 12, 0.72);
-  --overlay-bg: rgba(0, 0, 0, 0.72);
-  --text-primary: #eef1f5;
+  --page-bg: #0b0c10;
+  --card-bg: #171b22;
+  --sidebar-bg: #0d1015;
+  --glass-bg: rgba(13, 16, 21, 0.72);
+  --overlay-bg: rgba(0, 0, 0, 0.75);
+  --text-primary: #e0e6ed;
   --text-secondary: #9aa3af;
   --text-muted: #5f6773;
-  --border: rgba(224, 27, 36, 0.18);
-  --track-bg: #191c22;
+  --border: rgba(224, 27, 36, 0.22);
+  --track-bg: #1f2833;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
   --shadow-md: 0 10px 34px rgba(0, 0, 0, 0.6);
 
@@ -630,87 +630,128 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 /* ---------------------------------------------------------------------
    Toques "fora do padrão" do tema Star Wars (só quando data-theme=starwars)
    --------------------------------------------------------------------- */
-/* Títulos: fonte condensada pesada estilo pôster (Impact e afins do sistema),
-   caixa-alta bem espaçada, vermelho imperial. */
+/* Tipografia sci-fi: Orbitron (títulos e números, cara de HUD) + Rajdhani
+   (texto). Carregam do Google Fonts só neste tema; fallback pro sistema. */
+:root[data-theme="starwars"] body { font-family: "Rajdhani", var(--font); }
 :root[data-theme="starwars"] h1,
 :root[data-theme="starwars"] h2,
 :root[data-theme="starwars"] .sidebar__brand,
 :root[data-theme="starwars"] .dashboard-hero__label,
 :root[data-theme="starwars"] .stat-tile__label,
-:root[data-theme="starwars"] .mei-card__label {
-  font-family: "Impact", "Haettenschweiler", "Arial Narrow Bold", "SF Compact Display", sans-serif;
+:root[data-theme="starwars"] .mei-card__label,
+:root[data-theme="starwars"] .nav-label {
+  font-family: "Orbitron", "Impact", sans-serif;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  font-weight: 400;
+  letter-spacing: 0.12em;
+  font-weight: 700;
 }
-:root[data-theme="starwars"] h1 { color: var(--accent); font-size: 34px; }
+:root[data-theme="starwars"] h1 { color: var(--accent); font-size: 30px; }
 :root[data-theme="starwars"] .sidebar__brand { color: var(--accent); }
-/* Obs.: NÃO forçamos o valor-herói em vermelho — o vermelho aqui é a cor de
-   ALERTA/negativo. O saldo mantém verde (positivo) / vermelho (negativo) pra
-   não confundir o usuário; o vermelho do tema fica na "moldura" (títulos). */
-/* Números com cara de "console de nave" (fonte monoespaçada do sistema). */
+/* Obs.: NÃO forçamos o valor-herói em vermelho — vermelho aqui é ALERTA. O
+   saldo mantém verde (positivo)/vermelho (negativo) pra não confundir. */
 :root[data-theme="starwars"] .dashboard-hero__value,
 :root[data-theme="starwars"] .stat-tile__value,
 :root[data-theme="starwars"] .mei-card__value,
 :root[data-theme="starwars"] .valor-mono {
-  font-family: "SF Mono", ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  font-family: "Orbitron", "SF Mono", ui-monospace, monospace;
 }
-/* Mono é mais largo — reduz um pouco o valor dos cards pra não quebrar linha. */
-:root[data-theme="starwars"] .stat-tile__value { font-size: clamp(15px, 3.4vw, 18px); letter-spacing: -0.02em; }
-/* Botão de destaque com brilho vermelho e leve caixa-alta. */
-:root[data-theme="starwars"] .button--primary { text-transform: uppercase; letter-spacing: 0.06em; }
-/* A Estrela da Morte gira devagar no botão de tema. */
+:root[data-theme="starwars"] .stat-tile__value { font-size: clamp(14px, 3.2vw, 17px); letter-spacing: 0; }
+:root[data-theme="starwars"] .button--primary { text-transform: uppercase; letter-spacing: 0.08em; font-family: "Orbitron", sans-serif; }
+
+/* Rótulo dual do hero: "Painel de Comando" só aparece no tema Star Wars. */
+.hero-label--sw { display: none; }
+:root[data-theme="starwars"] .hero-label--default { display: none; }
+:root[data-theme="starwars"] .hero-label--sw { display: inline; }
+/* Símbolo de Créditos da República (invertido p/ ficar branco) antes do rótulo. */
+:root[data-theme="starwars"] .dashboard-hero__label::before {
+  content: "";
+  display: inline-block;
+  width: 13px; height: 13px;
+  margin-right: 6px;
+  vertical-align: -2px;
+  background: url("../img/credits.png") center/contain no-repeat;
+  filter: invert(1);
+}
+
+/* Estrela da Morte gira devagar no botão de tema. */
 :root[data-theme="starwars"] [data-role="tema-icone"] .icon { animation: portal-spin 24s linear infinite; }
 @media (prefers-reduced-motion: reduce) {
   :root[data-theme="starwars"] [data-role="tema-icone"] .icon { animation: none; }
 }
 
-/* Topo do Painel: campo de estrelas + névoa vermelha; ::before = Estrela da
-   Morte (mais visível), ::after = silhueta de capacete do lorde sith (homenagem
-   estilizada, não a arte oficial). Tudo decorativo, atrás dos cards. */
+/* Marca d'água da Estrela da Morte (imagem invertida = branca, bem suave)
+   fixa no fundo, atrás de todo o conteúdo. */
+:root[data-theme="starwars"] .view-container::before {
+  content: "";
+  position: fixed;
+  top: 46%; left: 58%;
+  transform: translate(-50%, -50%);
+  width: min(70vw, 600px);
+  height: min(70vw, 600px);
+  background: url("../img/deathstar.png") center/contain no-repeat;
+  filter: invert(1);
+  opacity: 0.05;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Topo do Painel: campo de estrelas + névoa vermelha + DARTH VADER (imagem
+   real) no canto direito, como "comandante" do painel. */
 :root[data-theme="starwars"] .dashboard-hero-glow {
-  height: 400px;
+  height: 300px;
   background:
     radial-gradient(1.5px 1.5px at 18% 24%, rgba(255,255,255,0.9), transparent),
-    radial-gradient(1px 1px at 42% 12%, rgba(255,255,255,0.7), transparent),
-    radial-gradient(1.5px 1.5px at 63% 30%, rgba(255,255,255,0.85), transparent),
+    radial-gradient(1px 1px at 42% 14%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1.5px 1.5px at 60% 30%, rgba(255,255,255,0.85), transparent),
     radial-gradient(1px 1px at 30% 44%, rgba(255,255,255,0.6), transparent),
-    radial-gradient(1px 1px at 74% 16%, rgba(255,255,255,0.7), transparent),
-    radial-gradient(1.5px 1.5px at 55% 50%, rgba(255,255,255,0.6), transparent),
-    radial-gradient(70% 100% at 12% 0%, var(--hero-grad-1), transparent 70%),
-    radial-gradient(60% 90% at 90% 6%, var(--hero-grad-2), transparent 72%);
-}
-:root[data-theme="starwars"] .dashboard-hero-glow::before {
-  content: "";
-  position: absolute;
-  top: 26px;
-  right: 30%;
-  width: 130px;
-  height: 130px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 66% 28%, rgba(0,0,0,0.6) 0 13px, transparent 15px),
-    linear-gradient(transparent 47%, rgba(0,0,0,0.5) 48% 52%, transparent 53%),
-    radial-gradient(circle at 38% 34%, #363b43, #15181d 60%, #080a0d 100%);
-  box-shadow: inset 0 0 34px rgba(0,0,0,0.85), 0 0 46px rgba(224,27,36,0.16);
-  opacity: 0.9;
-  pointer-events: none;
+    radial-gradient(1px 1px at 82% 18%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(70% 100% at 12% 0%, var(--hero-grad-1), transparent 70%);
 }
 :root[data-theme="starwars"] .dashboard-hero-glow::after {
   content: "";
   position: absolute;
-  top: -6px;
-  right: 4%;
-  width: 160px;
-  height: 190px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120'%3E%3Cpath d='M50 4c26 0 40 20 40 46 0 22-8 40-14 56l-9-4c5-16 9-30 9-50 0-24-12-36-26-36S24 28 24 52c0 20 4 34 9 50l-9 4C18 90 10 72 10 50 10 24 24 4 50 4Z' fill='%231b1f26'/%3E%3Cpath d='M28 52c0-18 9-30 22-30s22 12 22 30c0 26-11 50-22 62-11-12-22-36-22-62Z' fill='%230c0f14'/%3E%3Cpath d='M34 54l16-6-3 14-13 3Z' fill='%23e01b24'/%3E%3Cpath d='M66 54l-16-6 3 14 13 3Z' fill='%23e01b24'/%3E%3Cpath d='M44 74h12l-2 30h-8Z' fill='%2305070a'/%3E%3Cg stroke='%23e01b24' stroke-width='1.2' opacity='0.8'%3E%3Cline x1='40' y1='88' x2='60' y2='88'/%3E%3Cline x1='41' y1='96' x2='59' y2='96'/%3E%3C/g%3E%3C/svg%3E") center/contain no-repeat;
-  filter: drop-shadow(0 0 10px rgba(224,27,36,0.5));
-  opacity: 0.92;
+  top: -6px; right: 2%;
+  width: 200px; height: 220px;
+  background: url("../img/vader.png") right top/contain no-repeat;
+  filter: drop-shadow(0 0 16px rgba(224,27,36,0.45));
+  opacity: 0.95;
   pointer-events: none;
 }
-@media (max-width: 560px) {
-  :root[data-theme="starwars"] .dashboard-hero-glow::before { width: 84px; height: 84px; right: 40%; top: 14px; }
-  :root[data-theme="starwars"] .dashboard-hero-glow::after { width: 104px; height: 124px; top: 2px; }
+@media (max-width: 640px) {
+  :root[data-theme="starwars"] .dashboard-hero-glow::after { width: 116px; height: 132px; opacity: 0.8; }
+}
+
+/* Stormtrooper "vigiando os gastos": espia pelo canto do card Total gasto. */
+:root[data-theme="starwars"] .stat-tile--gasto { position: relative; overflow: hidden; }
+:root[data-theme="starwars"] .stat-tile--gasto::after {
+  content: "";
+  position: absolute;
+  bottom: -16px; right: -12px;
+  width: 66px; height: 66px;
+  background: url("../img/stormtrooper.png") center/contain no-repeat;
+  opacity: 0.85;
+  pointer-events: none;
+}
+/* Princesa Leia como "selo de esperança" no card Sobra do mês. */
+:root[data-theme="starwars"] .stat-tile--sobra { position: relative; overflow: hidden; }
+:root[data-theme="starwars"] .stat-tile--sobra::after {
+  content: "";
+  position: absolute;
+  top: -6px; right: -6px;
+  width: 50px; height: 50px;
+  background: url("../img/leia.png") center/contain no-repeat;
+  opacity: 0.9;
+  pointer-events: none;
+}
+/* Ícone do card Receita vira o símbolo da Aliança Rebelde (invertido=branco). */
+:root[data-theme="starwars"] .stat-tile--receita .stat-tile__icon { position: relative; }
+:root[data-theme="starwars"] .stat-tile--receita .stat-tile__icon .icon { visibility: hidden; }
+:root[data-theme="starwars"] .stat-tile--receita .stat-tile__icon::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  background: url("../img/rebel.png") center/contain no-repeat;
+  filter: invert(1);
 }
 
 /* Barras de "Gastos por categoria" viram SABRES DE LUZ: cabo metálico no
