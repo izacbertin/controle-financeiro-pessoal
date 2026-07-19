@@ -11,21 +11,26 @@ App.views.notasFiscais = (function () {
 
   let filtroAno = String(utils.currentYear());
 
-  // Card de acompanhamento do limite anual do MEI (R$ 81.000). Cor da barra
-  // muda conforme a proximidade do teto: ok (verde) < 70% < atenção (amarelo)
-  // < 90% < crítico (vermelho) — e "estourou" se passar do limite.
+  // Card de acompanhamento do limite anual do MEI. O limite vem da config do
+  // usuário (limiteMeiDoAno) — pode ser MEI comum, caminhoneiro ou custom, e
+  // é proporcional no ano de abertura do CNPJ. Cor da barra: ok (verde) < 70%
+  // < atenção (amarelo) < 90% < crítico (vermelho) — "estourou" se passar.
   function renderMei(ano) {
     const faturado = state.notasFiscaisDoAno(ano).total;
-    const limite = utils.LIMITE_MEI_ANUAL;
+    const info = state.limiteMeiDoAno(ano);
+    const limite = info.limite;
     const percent = limite > 0 ? (faturado / limite) * 100 : 0;
     const restante = limite - faturado;
-    const nivel = percent >= 100 ? 'critico' : percent >= 90 ? 'critico' : percent >= 70 ? 'atencao' : 'ok';
+    const nivel = percent >= 90 ? 'critico' : percent >= 70 ? 'atencao' : 'ok';
     const larguraBarra = utils.clamp(percent, 0, 100);
     const alerta = percent >= 100
       ? `⚠️ Você ultrapassou o limite do MEI em ${utils.formatCurrency(faturado - limite)}.`
       : percent >= 90
         ? `⚠️ Falta pouco: restam ${utils.formatCurrency(restante)} do limite.`
         : `Restam ${utils.formatCurrency(restante)} do limite deste ano.`;
+    const notaProporcional = info.proporcional
+      ? `<div class="mei-card__prorata">Limite proporcional: CNPJ aberto em ${utils.escapeHtml(utils.monthRefToShortLabel(state.getMeiConfig().abertura))} → ${info.meses} ${info.meses === 1 ? 'mês' : 'meses'} no ano.</div>`
+      : '';
     return `
       <div class="card mei-card">
         <div class="mei-card__head">
@@ -33,13 +38,79 @@ App.views.notasFiscais = (function () {
             <div class="mei-card__label">Limite MEI · ${ano}</div>
             <div class="mei-card__value">${utils.formatCurrency(faturado)} <span class="mei-card__limit">de ${utils.formatCurrency(limite)}</span></div>
           </div>
-          <div class="mei-card__pct mei-card__pct--${nivel}">${utils.formatPercent(percent, 0)}</div>
+          <div class="mei-card__headright">
+            <div class="mei-card__pct mei-card__pct--${nivel}">${utils.formatPercent(percent, 0)}</div>
+            <button type="button" class="icon-button" title="Configurar limite do MEI" data-action="config-mei">${App.icons.get('sliders')}</button>
+          </div>
         </div>
         <div class="mei-bar">
           <div class="mei-bar__fill mei-bar__fill--${nivel}" style="width:0%;" data-w="${larguraBarra}"></div>
         </div>
         <div class="mei-card__alerta mei-card__alerta--${nivel}">${alerta}</div>
+        ${notaProporcional}
       </div>`;
+  }
+
+  // Presets de limite: MEI comum e MEI caminhoneiro (valores vigentes; o
+  // usuário pode digitar outro valor se mudar). Mantidos aqui pra ficar fácil
+  // de atualizar caso o governo reajuste.
+  const PRESETS_MEI = [
+    { rotulo: 'MEI (geral) — R$ 81.000', valor: 81000 },
+    { rotulo: 'MEI Caminhoneiro — R$ 251.600', valor: 251600 },
+  ];
+
+  function abrirModalMei() {
+    const cfg = state.getMeiConfig();
+    const presetSelecionado = PRESETS_MEI.find((p) => p.valor === Number(cfg.limiteAnual));
+    const bodyHtml = `
+      <form class="form" data-form="mei">
+        <p class="info-banner">O limite do MEI muda conforme a categoria (geral ou caminhoneiro) e é proporcional no ano em que você abriu o CNPJ.</p>
+        <div class="form__row">
+          <label>Tipo de MEI / limite anual
+            <select name="preset">
+              ${PRESETS_MEI.map((p) => `<option value="${p.valor}" ${presetSelecionado && presetSelecionado.valor === p.valor ? 'selected' : ''}>${p.rotulo}</option>`).join('')}
+              <option value="custom" ${!presetSelecionado ? 'selected' : ''}>Outro valor…</option>
+            </select>
+          </label>
+        </div>
+        <div class="form__row ${presetSelecionado ? 'is-hidden' : ''}" data-field-wrap="limiteCustom">
+          <label>Limite anual personalizado (R$)
+            <input type="number" name="limiteCustom" step="0.01" min="0" value="${cfg.limiteAnual}" />
+          </label>
+        </div>
+        <div class="form__row">
+          <label>Mês de abertura do CNPJ (opcional)
+            <input type="month" name="abertura" value="${utils.escapeHtml(cfg.abertura || '')}" />
+          </label>
+        </div>
+        <p class="form__hint">Preencha a abertura só se quiser o rateio automático do primeiro ano. O mês de abertura conta como mês inteiro.</p>
+        <div class="form__actions">
+          <button type="button" class="button button--ghost" data-action="closeModal">Cancelar</button>
+          <button type="submit" class="button button--primary">Salvar</button>
+        </div>
+      </form>`;
+    App.modal.open({
+      title: 'Configurar limite do MEI',
+      bodyHtml,
+      onMount(dialog) {
+        const form = dialog.querySelector('form');
+        const preset = form.elements.preset;
+        const customWrap = dialog.querySelector('[data-field-wrap="limiteCustom"]');
+        preset.addEventListener('change', () => {
+          customWrap.classList.toggle('is-hidden', preset.value !== 'custom');
+        });
+        form.onsubmit = (e) => {
+          e.preventDefault();
+          const fd = new FormData(form);
+          const limiteAnual = fd.get('preset') === 'custom'
+            ? (Number(fd.get('limiteCustom')) || 0)
+            : Number(fd.get('preset'));
+          state.setMeiConfig({ limiteAnual, abertura: fd.get('abertura') || '' });
+          App.toast.show('Limite do MEI atualizado.', 'sucesso');
+          App.modal.close();
+        };
+      },
+    });
   }
 
   function render(container) {
@@ -151,6 +222,7 @@ App.views.notasFiscais = (function () {
       if (!btn) return;
       const { action, id } = btn.dataset;
       if (action === 'nova-nf') abrirModalNF(null);
+      else if (action === 'config-mei') abrirModalMei();
       else if (action === 'editar') abrirModalNF(state.getData().notasFiscais.find((n) => n.id === id));
       else if (action === 'excluir') {
         if (window.confirm('Excluir esta nota fiscal?')) {

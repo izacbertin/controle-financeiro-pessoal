@@ -89,6 +89,38 @@ App.state = (function () {
   }
 
   // ---------------------------------------------------------------------
+  // Configuração do MEI (limite anual + rateio do ano de abertura)
+  // ---------------------------------------------------------------------
+
+  function getMeiConfig() {
+    return Object.assign({ limiteAnual: utils.LIMITE_MEI_ANUAL, abertura: '' }, data.preferencias.mei);
+  }
+
+  function setMeiConfig(patch) {
+    data.preferencias.mei = Object.assign(getMeiConfig(), patch);
+    persist();
+    notify();
+  }
+
+  // Limite do MEI para um ano específico. Se o CNPJ foi aberto naquele mesmo
+  // ano, o limite é proporcional: (limite/12) × meses do mês de abertura até
+  // dezembro (o mês de abertura já conta como mês inteiro). Anos completos
+  // seguintes usam o limite cheio. Devolve { limite, proporcional, meses }.
+  function limiteMeiDoAno(ano) {
+    const cfg = getMeiConfig();
+    const base = Number(cfg.limiteAnual) || utils.LIMITE_MEI_ANUAL;
+    if (cfg.abertura) {
+      const [ay, am] = cfg.abertura.split('-').map(Number);
+      if (ano < ay) return { limite: 0, proporcional: true, meses: 0 };
+      if (ano === ay) {
+        const meses = 12 - am + 1;
+        return { limite: Math.round((base / 12) * meses), proporcional: meses < 12, meses };
+      }
+    }
+    return { limite: base, proporcional: false, meses: 12 };
+  }
+
+  // ---------------------------------------------------------------------
   // Categorias
   // ---------------------------------------------------------------------
 
@@ -540,6 +572,7 @@ App.state = (function () {
 
   return {
     init, getData, getUI, setUI, subscribe, replaceData, resetAll, getTema, setTema,
+    getMeiConfig, setMeiConfig, limiteMeiDoAno,
     listCategorias, categoriaNome, addCategoria,
     addGasto, addGastosLote, updateGasto, deleteGasto, marcarGastoPago, marcarGastoPendente,
     addReceita, updateReceita, deleteReceita, receitaDoMes,
