@@ -11,11 +11,43 @@ App.views.notasFiscais = (function () {
 
   let filtroAno = String(utils.currentYear());
 
+  // Card de acompanhamento do limite anual do MEI (R$ 81.000). Cor da barra
+  // muda conforme a proximidade do teto: ok (verde) < 70% < atenção (amarelo)
+  // < 90% < crítico (vermelho) — e "estourou" se passar do limite.
+  function renderMei(ano) {
+    const faturado = state.notasFiscaisDoAno(ano).total;
+    const limite = utils.LIMITE_MEI_ANUAL;
+    const percent = limite > 0 ? (faturado / limite) * 100 : 0;
+    const restante = limite - faturado;
+    const nivel = percent >= 100 ? 'critico' : percent >= 90 ? 'critico' : percent >= 70 ? 'atencao' : 'ok';
+    const larguraBarra = utils.clamp(percent, 0, 100);
+    const alerta = percent >= 100
+      ? `⚠️ Você ultrapassou o limite do MEI em ${utils.formatCurrency(faturado - limite)}.`
+      : percent >= 90
+        ? `⚠️ Falta pouco: restam ${utils.formatCurrency(restante)} do limite.`
+        : `Restam ${utils.formatCurrency(restante)} do limite deste ano.`;
+    return `
+      <div class="card mei-card">
+        <div class="mei-card__head">
+          <div>
+            <div class="mei-card__label">Limite MEI · ${ano}</div>
+            <div class="mei-card__value">${utils.formatCurrency(faturado)} <span class="mei-card__limit">de ${utils.formatCurrency(limite)}</span></div>
+          </div>
+          <div class="mei-card__pct mei-card__pct--${nivel}">${utils.formatPercent(percent, 0)}</div>
+        </div>
+        <div class="mei-bar">
+          <div class="mei-bar__fill mei-bar__fill--${nivel}" style="width:0%;" data-w="${larguraBarra}"></div>
+        </div>
+        <div class="mei-card__alerta mei-card__alerta--${nivel}">${alerta}</div>
+      </div>`;
+  }
+
   function render(container) {
     const todas = state.getData().notasFiscais.slice().sort((a, b) => (a.dataEmissao < b.dataEmissao ? 1 : -1));
     const anos = state.anosDisponiveis();
     const lista = filtroAno ? todas.filter((n) => utils.yearFromMonthRef(n.mesEmissao) === Number(filtroAno)) : todas;
     const resumoAno = filtroAno ? state.notasFiscaisDoAno(Number(filtroAno)) : { quantidade: lista.length, total: utils.sum(lista, (n) => n.valor) };
+    const anoMei = filtroAno ? Number(filtroAno) : utils.currentYear();
 
     container.innerHTML = `
       <div class="view-header">
@@ -29,6 +61,8 @@ App.views.notasFiscais = (function () {
           ${anos.map((a) => `<option value="${a}" ${String(a) === filtroAno ? 'selected' : ''}>${a}</option>`).join('')}
         </select>
       </div>
+
+      ${renderMei(anoMei)}
 
       <div class="list-summary">${resumoAno.quantidade} nota${resumoAno.quantidade === 1 ? '' : 's'} emitida${resumoAno.quantidade === 1 ? '' : 's'} · Total faturado ${utils.formatCurrency(resumoAno.total)}</div>
 
@@ -48,6 +82,12 @@ App.views.notasFiscais = (function () {
             </div>`).join('')}
         </div>` : '<p class="empty-hint empty-hint--block">Nenhuma nota fiscal cadastrada ainda.</p>'}
     `;
+
+    // Anima a barra do MEI (0% -> valor) no próximo frame.
+    requestAnimationFrame(() => {
+      const barra = container.querySelector('.mei-bar__fill');
+      if (barra) barra.style.width = barra.dataset.w + '%';
+    });
 
     wireEvents(container);
   }

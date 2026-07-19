@@ -212,6 +212,22 @@ App.views.gastos = (function () {
           </label>
         </div>
 
+        ${gastoExistente ? '' : `
+        <div class="form__row form__row--2">
+          <label>Repetição
+            <select name="repeticaoModo">
+              <option value="unico">Único</option>
+              <option value="mensal">Repetir mensalmente</option>
+              <option value="parcelado">Parcelado</option>
+            </select>
+          </label>
+          <label class="is-hidden" data-field-wrap="repeticaoQtd">
+            <span data-role="repeticao-qtd-label">Nº de meses</span>
+            <input type="number" name="repeticaoQtd" min="2" max="60" value="12" />
+          </label>
+        </div>
+        <p class="form__hint is-hidden" data-role="repeticao-hint"></p>`}
+
         <div class="form__actions">
           <button type="button" class="button button--ghost" data-action="closeModal">Cancelar</button>
           <button type="submit" class="button button--primary">Salvar</button>
@@ -234,6 +250,27 @@ App.views.gastos = (function () {
         statusSelect.addEventListener('change', () => {
           dataPagamentoWrap.classList.toggle('is-hidden', statusSelect.value !== 'pago');
         });
+
+        // Repetição (só existe ao criar): mostra/oculta a quantidade e ajusta
+        // o rótulo/dica conforme "mensal" ou "parcelado".
+        const repeticaoModo = form.elements.repeticaoModo;
+        if (repeticaoModo) {
+          const qtdWrap = dialog.querySelector('[data-field-wrap="repeticaoQtd"]');
+          const qtdLabel = dialog.querySelector('[data-role="repeticao-qtd-label"]');
+          const hint = dialog.querySelector('[data-role="repeticao-hint"]');
+          repeticaoModo.addEventListener('change', () => {
+            const modo = repeticaoModo.value;
+            qtdWrap.classList.toggle('is-hidden', modo === 'unico');
+            hint.classList.toggle('is-hidden', modo === 'unico');
+            if (modo === 'mensal') {
+              qtdLabel.textContent = 'Repetir por (meses)';
+              hint.textContent = 'Cria vários lançamentos iguais, um em cada mês seguinte.';
+            } else if (modo === 'parcelado') {
+              qtdLabel.textContent = 'Nº de parcelas';
+              hint.textContent = 'Cria as parcelas (1/N, 2/N…), uma por mês. O valor informado é o de CADA parcela.';
+            }
+          });
+        }
 
         form.onsubmit = (e) => {
           e.preventDefault();
@@ -264,8 +301,15 @@ App.views.gastos = (function () {
             state.updateGasto(gastoExistente.id, payload);
             App.toast.show('Gasto atualizado.', 'sucesso');
           } else {
-            state.addGasto(payload);
-            App.toast.show('Gasto adicionado.', 'sucesso');
+            const modo = fd.get('repeticaoModo') || 'unico';
+            const qtd = Math.max(2, Math.min(60, Number(fd.get('repeticaoQtd')) || 2));
+            if (modo === 'mensal' || modo === 'parcelado') {
+              const criados = state.addGastosLote(payload, { modo, quantidade: qtd });
+              App.toast.show(`${criados.length} lançamentos criados.`, 'sucesso');
+            } else {
+              state.addGasto(payload);
+              App.toast.show('Gasto adicionado.', 'sucesso');
+            }
           }
           App.modal.close();
         };

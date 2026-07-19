@@ -125,6 +125,44 @@ App.state = (function () {
     return novo;
   }
 
+  // Cria vários gastos de uma vez (recorrência mensal ou parcelamento).
+  // repeticao: { modo: 'mensal' | 'parcelado', quantidade: N }
+  //  - 'mensal':   N cópias iguais, uma por mês consecutivo.
+  //  - 'parcelado': N parcelas; a descrição ganha "(i/N)" e cada uma cai num
+  //                 mês consecutivo. O `valor` informado é o de CADA parcela.
+  // Vencimento e mês de referência avançam 1 mês a cada repetição.
+  function addGastosLote(gastoBase, repeticao) {
+    const qtd = Math.max(1, Number(repeticao && repeticao.quantidade) || 1);
+    const modo = repeticao && repeticao.modo;
+    const criados = [];
+    for (let i = 0; i < qtd; i++) {
+      const copia = Object.assign({ id: utils.uuid(), desconto: 0 }, gastoBase);
+      copia.vencimento = avancarDataMeses(gastoBase.vencimento, i);
+      copia.mesReferencia = utils.addMonths(gastoBase.mesReferencia, i);
+      if (modo === 'parcelado' && qtd > 1) {
+        copia.descricao = `${gastoBase.descricao} (${i + 1}/${qtd})`;
+      }
+      // Só a primeira pode herdar "pago"; as futuras nascem pendentes.
+      if (i > 0) { copia.status = 'pendente'; copia.dataPagamento = ''; }
+      data.gastos.push(copia);
+      criados.push(copia);
+    }
+    persist();
+    notify();
+    return criados;
+  }
+
+  // Avança uma data ISO em N meses, preservando o dia quando possível
+  // (cai no último dia do mês se o dia não existir, ex.: 31 -> 30).
+  function avancarDataMeses(isoDate, n) {
+    if (!isoDate || !n) return isoDate;
+    const [y, m, d] = isoDate.split('-').map(Number);
+    const alvo = new Date(Date.UTC(y, m - 1 + n, 1));
+    const ultimoDia = new Date(Date.UTC(alvo.getUTCFullYear(), alvo.getUTCMonth() + 1, 0)).getUTCDate();
+    const dia = Math.min(d, ultimoDia);
+    return `${alvo.getUTCFullYear()}-${utils.pad(alvo.getUTCMonth() + 1)}-${utils.pad(dia)}`;
+  }
+
   function updateGasto(id, patch) {
     const gasto = data.gastos.find((g) => g.id === id);
     if (!gasto) return;
@@ -255,7 +293,57 @@ App.state = (function () {
   }
 
   // ---------------------------------------------------------------------
-  // Seletores / indicadores (usados pelo Dashboard e Consolidado)
+  // Orçamentos por categoria (teto de gasto mensal)
+  // ---------------------------------------------------------------------
+
+  function getOrcamentos() {
+    return data.orcamentos || {};
+  }
+
+  // Define (ou remove, se valor <= 0) o teto mensal de uma categoria.
+  function setOrcamento(categoriaId, valor) {
+    if (!data.orcamentos) data.orcamentos = {};
+    const v = Number(valor) || 0;
+    if (v > 0) data.orcamentos[categoriaId] = v;
+    else delete data.orcamentos[categoriaId];
+    persist();
+    notify();
+  }
+
+  // Define todos os orçamentos de uma vez (usado pelo modal "Definir
+  // orçamentos"), evitando um re-render por categoria.
+  function setOrcamentosEmLote(mapa) {
+    const novo = {};
+    Object.keys(mapa || {}).forEach((id) => {
+      const v = Number(mapa[id]) || 0;
+      if (v > 0) novo[id] = v;
+    });
+    data.orcamentos = novo;
+    persist();
+    notify();
+  }
+
+  // Situação do orçamento de cada categoria COM teto definido, no mês dado:
+  // [{ categoriaId, nome, limite, gasto, percent, estourou }]
+  function orcamentoStatusDoMes(mesReferencia) {
+    const orcs = getOrcamentos();
+    const gastosMes = gastosDoMes(mesReferencia);
+    return Object.keys(orcs).map((categoriaId) => {
+      const limite = orcs[categoriaId];
+      const gasto = utils.sum(gastosMes.filter((g) => g.categoriaId === categoriaId), valorLiquido);
+      return {
+        categoriaId,
+        nome: categoriaNome(categoriaId),
+        limite,
+        gasto,
+        percent: limite > 0 ? (gasto / limite) * 100 : 0,
+        estourou: gasto > limite,
+      };
+    }).sort((a, b) => b.percent - a.percent);
+  }
+
+  // ---------------------------------------------------------------------
+  // Seletores / indicadores (usados pelo Dashboard)
   // ---------------------------------------------------------------------
 
   function valorLiquido(gasto) {
@@ -369,12 +457,28 @@ App.state = (function () {
       totalPago: t.totalPago,
       totalPendente: t.totalPendente,
       percentPago: t.percentPago,
-      saldo: receitaComSaldo - t.totalLiquido,   // saldo corrente ao fim do mês
+      saldo: receitaComSaldo - t.totalLiquido,   // saldo corrente ao fim do mês (caixa acumulado)
+      saldoDoMes: receitaLancada - t.totalLiquido, // resultado SÓ deste mês (sem carryover)
       // "Renda comprometida" continua sobre a renda REAL lançada (o saldo
       // acumulado é dinheiro guardado, não renda nova).
       percentRendaComprometida: receitaLancada > 0 ? (t.totalLiquido / receitaLancada) * 100 : null,
+      // Taxa de poupança: quanto da receita efetiva sobrou (saldo/receita).
+      taxaPoupanca: receitaComSaldo > 0 ? ((receitaComSaldo - t.totalLiquido) / receitaComSaldo) * 100 : null,
       quantidade: t.quantidade,
     };
+  }
+
+  // Média da despesa líquida dos N meses ANTERIORES a mesReferencia (só conta
+  // meses que tiveram algum gasto lançado, pra não diluir com meses vazios).
+  function mediaDespesasMesesAnteriores(mesReferencia, n) {
+    const valores = [];
+    for (let i = 1; i <= (n || 3); i++) {
+      const m = utils.addMonths(mesReferencia, -i);
+      const lista = gastosDoMes(m);
+      if (lista.length) valores.push(totais(lista).totalLiquido);
+    }
+    if (!valores.length) return null;
+    return utils.sum(valores, (v) => v) / valores.length;
   }
 
   function resumoAnual(ano) {
@@ -437,13 +541,14 @@ App.state = (function () {
   return {
     init, getData, getUI, setUI, subscribe, replaceData, resetAll, getTema, setTema,
     listCategorias, categoriaNome, addCategoria,
-    addGasto, updateGasto, deleteGasto, marcarGastoPago, marcarGastoPendente,
+    addGasto, addGastosLote, updateGasto, deleteGasto, marcarGastoPago, marcarGastoPendente,
     addReceita, updateReceita, deleteReceita, receitaDoMes,
     addNotaFiscal, updateNotaFiscal, deleteNotaFiscal,
+    getOrcamentos, setOrcamento, setOrcamentosEmLote, orcamentoStatusDoMes,
     getFiltros, setFiltro, limparFiltros, statusEfetivo, gastosFiltrados,
     valorLiquido, gastosDoMes, gastosDoAno, totais, gastosPorCategoria,
     comparativoFixoVariavel, gastosAtrasados, proximosVencimentos,
-    resumoMensal, resumoAnual, variacaoMesAnterior, evolucaoMensal,
+    resumoMensal, resumoAnual, variacaoMesAnterior, mediaDespesasMesesAnteriores, evolucaoMensal,
     topCategorias, notasFiscaisDoAno, anosDisponiveis,
   };
 })();

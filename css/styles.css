@@ -821,6 +821,53 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 .donut-legend__pct { color: var(--text-muted); min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
 
 /* ---------------------------------------------------------------------
+   Card de Controle MEI (limite anual de faturamento)
+   --------------------------------------------------------------------- */
+.mei-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
+.mei-card__label { font-size: 13px; color: var(--text-secondary); margin-bottom: 4px; }
+.mei-card__value { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+.mei-card__limit { font-size: 14px; font-weight: 400; color: var(--text-muted); }
+.mei-card__pct { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+.mei-card__pct--ok { color: var(--status-good); }
+.mei-card__pct--atencao { color: var(--status-warning); }
+.mei-card__pct--critico { color: var(--status-critical); }
+.mei-bar { height: 10px; border-radius: 999px; background: var(--track-bg); overflow: hidden; }
+.mei-bar__fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 800ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.mei-bar__fill--ok { background: var(--status-good); }
+.mei-bar__fill--atencao { background: var(--status-warning); }
+.mei-bar__fill--critico { background: var(--status-critical); }
+.mei-card__alerta { font-size: 13px; margin-top: 10px; color: var(--text-secondary); }
+.mei-card__alerta--atencao { color: var(--status-warning); }
+.mei-card__alerta--critico { color: var(--status-critical); font-weight: 500; }
+@media (prefers-reduced-motion: reduce) { .mei-bar__fill { transition: none; } }
+
+/* ---------------------------------------------------------------------
+   Orçamento por categoria (teto mensal)
+   --------------------------------------------------------------------- */
+.orc-list { display: flex; flex-direction: column; gap: var(--space-4); }
+.orc-row__top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: 7px; }
+.orc-row__nome { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.orc-row__valores { font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.orc-row__limite { color: var(--text-muted); }
+.orc-bar { height: 8px; border-radius: 999px; background: var(--track-bg); overflow: hidden; }
+.orc-bar__fill { height: 100%; border-radius: 999px; transition: width 700ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.orc-bar__fill--ok { background: var(--status-good); }
+.orc-bar__fill--atencao { background: var(--status-warning); }
+.orc-bar__fill--critico { background: var(--status-critical); }
+@media (prefers-reduced-motion: reduce) { .orc-bar__fill { transition: none; } }
+
+/* Modal "Definir orçamentos" */
+.orc-form { display: flex; flex-direction: column; gap: 10px; max-height: 52vh; overflow-y: auto; margin-bottom: var(--space-4); }
+.orc-form__row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.orc-form__nome { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-primary); }
+.orc-form__row input { width: 130px; border: 1px solid var(--border); background: var(--page-bg); color: var(--text-primary); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 14px; }
+.orc-form__row input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* ---------------------------------------------------------------------
    Gráfico de linha (evolução mensal)
    --------------------------------------------------------------------- */
 
@@ -1106,6 +1153,7 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
   outline-offset: 1px;
 }
 .form__actions { display: flex; justify-content: flex-end; gap: var(--space-3); margin-top: var(--space-2); }
+.form__hint { font-size: 12px; color: var(--text-muted); margin-top: -6px; line-height: 1.4; }
 .is-hidden { display: none !important; }
 
 /* ---------------------------------------------------------------------

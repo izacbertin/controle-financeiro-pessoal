@@ -35,6 +35,8 @@ App.storage = (function () {
       gastos: [],
       receitas: [],
       notasFiscais: [],
+      // Teto de gasto mensal por categoria: { [categoriaId]: valorMensal }.
+      orcamentos: {},
       preferencias: { tema: 'sistema' },
     };
   }
@@ -50,6 +52,7 @@ App.storage = (function () {
       gastos: Array.isArray(data.gastos) ? data.gastos : [],
       receitas: Array.isArray(data.receitas) ? data.receitas : [],
       notasFiscais: Array.isArray(data.notasFiscais) ? data.notasFiscais : [],
+      orcamentos: (data.orcamentos && typeof data.orcamentos === 'object') ? data.orcamentos : {},
       preferencias: Object.assign({ tema: 'sistema' }, data.preferencias),
     };
   }

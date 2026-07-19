@@ -8,6 +8,10 @@ App.utils = (function () {
   const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
   const dateFormatter = new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC' });
 
+  // Teto anual de faturamento do MEI (R$ 81.000 desde 2018). Se o governo
+  // reajustar, é só mudar este valor. Usado no card de Controle MEI.
+  const LIMITE_MEI_ANUAL = 81000;
+
   function pad(n) {
     return String(n).padStart(2, '0');
   }
@@ -137,5 +141,6 @@ App.utils = (function () {
     currentMonthRef, currentYear, monthRefToLabel, monthRefToShortLabel,
     addMonths, monthRefFromDate, yearFromMonthRef, last12Months, uuid,
     escapeHtml, isOverdue, daysUntil, sum, clamp, pad, capitalize, statusLabel,
+    LIMITE_MEI_ANUAL,
   };
 })();
