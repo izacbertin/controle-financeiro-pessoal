@@ -4,3 +4,6 @@
 dados-importados.json
 controle-financeiro-backup-*.json
 *.numbers
+
+# macOS
+.DS_Store
