@@ -53,6 +53,8 @@ App.icons = (function () {
     contrast: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/>',
     // Portal (referência ao Rick and Morty) — espiral concêntrica.
     portal: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.5"/><circle cx="12" cy="12" r="2"/>',
+    // Estrela da Morte (Star Wars) — esfera + prato do superlaser + trincheira.
+    'death-star': '<circle cx="12" cy="12" r="9"/><circle cx="15.6" cy="8.4" r="2.2"/><line x1="3.2" y1="12.6" x2="20.8" y2="12.6"/>',
 
     // Categorias
     'cat-alimentacao': '<path d="M6 12v9"/><path d="M4.5 3v3a1.5 1.5 0 0 0 3 0V3"/><path d="M6 6v6"/><path d="M16.6 3c-1.3 1.9-1.6 5.1-1.6 7.2 0 1.2.8 2 1.9 2"/><path d="M16.9 12.2V21"/>',

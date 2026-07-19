@@ -5,7 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Controle Financeiro Pessoal</title>
   <meta name="description" content="Controle financeiro pessoal — painel, gastos, receitas e notas fiscais, 100% local." />
-  <link rel="stylesheet" href="css/styles.css" />
+  <!--
+    ?v=NN nos arquivos abaixo = "cache-busting": a cada mudança publicada
+    incrementamos esse número, e o navegador (incl. Safari do iPhone) é
+    obrigado a baixar a versão nova em vez de usar a antiga em cache.
+    >>> Ao publicar uma atualização, suba o número em TODAS as linhas. <<<
+  -->
+  <link rel="stylesheet" href="css/styles.css?v=9" />
 </head>
 <body>
   <div id="app-shell"></div>
@@ -15,18 +21,18 @@
   <input type="file" id="import-file-input" accept="application/json" hidden />
 
   <!-- Ordem importa: cada arquivo assume que os anteriores já rodaram. -->
-  <script src="js/utils.js"></script>
-  <script src="js/storage.js"></script>
-  <script src="js/state.js"></script>
-  <script src="js/charts.js"></script>
-  <script src="js/components/icons.js"></script>
-  <script src="js/components/modal.js"></script>
-  <script src="js/components/toast.js"></script>
-  <script src="js/components/animate.js"></script>
-  <script src="js/views/dashboard.js"></script>
-  <script src="js/views/gastos.js"></script>
-  <script src="js/views/receitas.js"></script>
-  <script src="js/views/nfs.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/utils.js?v=9"></script>
+  <script src="js/storage.js?v=9"></script>
+  <script src="js/state.js?v=9"></script>
+  <script src="js/charts.js?v=9"></script>
+  <script src="js/components/icons.js?v=9"></script>
+  <script src="js/components/modal.js?v=9"></script>
+  <script src="js/components/toast.js?v=9"></script>
+  <script src="js/components/animate.js?v=9"></script>
+  <script src="js/views/dashboard.js?v=9"></script>
+  <script src="js/views/gastos.js?v=9"></script>
+  <script src="js/views/receitas.js?v=9"></script>
+  <script src="js/views/nfs.js?v=9"></script>
+  <script src="js/app.js?v=9"></script>
 </body>
 </html>

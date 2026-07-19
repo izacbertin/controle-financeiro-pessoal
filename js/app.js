@@ -18,9 +18,9 @@
   // Ciclo de temas: Automático -> Claro -> Escuro -> Oceano -> (volta).
   // "sistema" e "oceano" seguem o claro/escuro do aparelho; "claro"/"escuro"
   // são fixos. (Ver as variáveis de cor em css/styles.css.)
-  const TEMA_CICLO = { sistema: 'claro', claro: 'escuro', escuro: 'oceano', oceano: 'rick', rick: 'sistema' };
-  const TEMA_ICONE = { sistema: 'contrast', claro: 'sun', escuro: 'moon', oceano: 'waves', rick: 'portal' };
-  const TEMA_LABEL = { sistema: 'Automático', claro: 'Claro', escuro: 'Escuro', oceano: 'Oceano', rick: 'Rick and Morty' };
+  const TEMA_CICLO = { sistema: 'claro', claro: 'escuro', escuro: 'oceano', oceano: 'rick', rick: 'starwars', starwars: 'sistema' };
+  const TEMA_ICONE = { sistema: 'contrast', claro: 'sun', escuro: 'moon', oceano: 'waves', rick: 'portal', starwars: 'death-star' };
+  const TEMA_LABEL = { sistema: 'Automático', claro: 'Claro', escuro: 'Escuro', oceano: 'Oceano', rick: 'Rick and Morty', starwars: 'Star Wars' };
   let ultimaViewRenderizada = null;
 
   function navHtml(activeView, extraClass) {
@@ -59,6 +59,7 @@
     if (tema === 'sistema') delete document.documentElement.dataset.theme;
     else if (tema === 'oceano') document.documentElement.dataset.theme = 'oceano';
     else if (tema === 'rick') document.documentElement.dataset.theme = 'rick';
+    else if (tema === 'starwars') document.documentElement.dataset.theme = 'starwars';
     else document.documentElement.dataset.theme = tema === 'escuro' ? 'dark' : 'light';
     const icone = document.querySelector('[data-role="tema-icone"]');
     const label = document.querySelector('[data-role="tema-label"]');

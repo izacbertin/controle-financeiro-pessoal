@@ -182,6 +182,9 @@ App.charts = (function () {
       return `<text x="${xAt(i)}" y="${LINE_H - PAD.bottom + 22}" class="chart-axis-label" text-anchor="middle">${utils.escapeHtml(utils.monthRefToShortLabel(m))}</text>`;
     }).join('');
 
+    // Linhas + ponto final (sem o rótulo — os rótulos são posicionados
+    // depois, juntos, pra evitar sobreposição quando as séries terminam com
+    // valores próximos).
     const linesSvg = series.map((s) => {
       const d = s.values.map((v, i) => `${i === 0 ? 'M' : 'L'}${xAt(i)},${yAt(v)}`).join(' ');
       const lastIndex = s.values.length - 1;
@@ -189,9 +192,27 @@ App.charts = (function () {
       const lastY = yAt(s.values[lastIndex]);
       return `
         <path class="chart-line" d="${d}" fill="none" stroke="var(--series-${s.key})" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
-        <circle class="chart-end-dot" cx="${lastX}" cy="${lastY}" r="4" fill="var(--series-${s.key})" stroke="var(--card-bg)" stroke-width="2" />
-        <text x="${utils.clamp(lastX, PAD.left, LINE_W - PAD.right - 40)}" y="${utils.clamp(lastY - 10, PAD.top + 10, LINE_H - PAD.bottom - 4)}" class="chart-end-label" text-anchor="end">${utils.escapeHtml(formatValue(s.values[lastIndex]))}</text>`;
+        <circle class="chart-end-dot" cx="${lastX}" cy="${lastY}" r="4" fill="var(--series-${s.key})" stroke="var(--card-bg)" stroke-width="2" />`;
     }).join('');
+
+    // Rótulos do valor final: anti-colisão vertical (empurra pra baixo quando
+    // ficam perto), coloridos pela cor da série pra sempre dar pra distinguir
+    // qual é qual. Funciona pra 2+ séries e conforme mais meses entram.
+    const MIN_GAP = 16;
+    const endLabels = series.map((s) => {
+      const li = s.values.length - 1;
+      return { key: s.key, y: yAt(s.values[li]), text: formatValue(s.values[li]) };
+    }).sort((a, b) => a.y - b.y);
+    for (let i = 1; i < endLabels.length; i++) {
+      if (endLabels[i].y - endLabels[i - 1].y < MIN_GAP) endLabels[i].y = endLabels[i - 1].y + MIN_GAP;
+    }
+    // Se o empilhamento estourou a base, sobe o grupo todo; depois trava no topo.
+    const excesso = endLabels.length ? endLabels[endLabels.length - 1].y - (LINE_H - PAD.bottom - 2) : 0;
+    if (excesso > 0) endLabels.forEach((l) => { l.y -= excesso; });
+    endLabels.forEach((l) => { if (l.y < PAD.top + 8) l.y = PAD.top + 8; });
+    const endLabelsSvg = endLabels.map((l) =>
+      `<text x="${LINE_W - PAD.right}" y="${l.y}" class="chart-end-label" fill="var(--series-${l.key})" text-anchor="end" dominant-baseline="middle">${utils.escapeHtml(l.text)}</text>`
+    ).join('');
 
     const legendHtml = series.map((s) => `
       <span class="chart-legend__item">
@@ -212,6 +233,7 @@ App.charts = (function () {
           ${gridSvg}
           ${xLabelsSvg}
           ${linesSvg}
+          ${endLabelsSvg}
           <rect class="chart-hover-layer" x="${PAD.left}" y="${PAD.top}" width="${plotW}" height="${plotH}" fill="transparent" />
           <line class="chart-crosshair" x1="0" y1="${PAD.top}" x2="0" y2="${LINE_H - PAD.bottom}" style="opacity:0" />
         </svg>
