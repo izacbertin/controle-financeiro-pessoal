@@ -31,6 +31,17 @@
       </button>`).join('');
   }
 
+  // Barra inferior (mobile): navegação + botão "Ajustes". Esse botão dá acesso
+  // a tema/exportar/importar/zerar no celular, já que a barra lateral (onde
+  // essas ações ficam no desktop) é escondida em telas pequenas.
+  function tabbarHtml(activeView) {
+    return navHtml(activeView, 'tabbar__link') + `
+      <button type="button" class="tabbar__link" data-action="ajustes">
+        <span class="nav-icon" aria-hidden="true">${App.icons.get('settings')}</span>
+        <span class="nav-label">Ajustes</span>
+      </button>`;
+  }
+
   function renderShell() {
     const shell = document.getElementById('app-shell');
     shell.innerHTML = `
@@ -71,7 +82,7 @@
     applyTema();
     const ui = state.getUI();
     document.querySelector('[data-role="nav-desktop"]').innerHTML = navHtml(ui.view, 'sidebar__link');
-    document.querySelector('[data-role="nav-mobile"]').innerHTML = navHtml(ui.view, 'tabbar__link');
+    document.querySelector('[data-role="nav-mobile"]').innerHTML = tabbarHtml(ui.view);
 
     const view = App.views[ui.view];
     const container = document.getElementById('view-container');
@@ -101,6 +112,70 @@
       });
   }
 
+  // Executa uma ação global. Compartilhado entre a barra lateral (desktop) e
+  // o modal de Ajustes (mobile). Devolve true se a ação fecha um contexto
+  // (usado pelo modal pra saber se deve se fechar).
+  function executarAcao(acao) {
+    switch (acao) {
+      case 'tema':
+        state.setTema(TEMA_CICLO[state.getTema()]);
+        return false; // mantém o menu/modal aberto pra ver o tema trocar
+      case 'exportar':
+        App.storage.exportToFile(state.getData());
+        App.toast.show('Backup exportado.', 'sucesso');
+        return true;
+      case 'importar':
+        document.getElementById('import-file-input').click();
+        return true;
+      case 'zerar':
+        if (window.confirm('Isso apaga TODOS os gastos, receitas e notas fiscais guardados neste navegador. Exporte um backup antes, se quiser manter os dados. Continuar?')) {
+          state.resetAll();
+          App.toast.show('Dados zerados.', 'info');
+        }
+        return true;
+      case 'ajustes':
+        abrirAjustes();
+        return false;
+      default:
+        return false;
+    }
+  }
+
+  // Modal de Ajustes (usado no mobile, onde a barra lateral não aparece).
+  // Reúne tema + backup + zerar, reaproveitando executarAcao().
+  function abrirAjustes() {
+    const temaAtual = state.getTema();
+    const bodyHtml = `
+      <div class="ajustes">
+        <button type="button" class="button button--ghost button--full button--icon" data-acao="tema">
+          <span data-role="ajustes-tema-icone">${App.icons.get(TEMA_ICONE[temaAtual])}</span>
+          <span data-role="ajustes-tema-label">Tema: ${TEMA_LABEL[temaAtual]}</span>
+        </button>
+        <button type="button" class="button button--ghost button--full button--icon" data-acao="exportar">${App.icons.get('download')} Exportar backup</button>
+        <button type="button" class="button button--ghost button--full button--icon" data-acao="importar">${App.icons.get('upload')} Importar backup</button>
+        <button type="button" class="button button--ghost button--full button--icon button--danger" data-acao="zerar">${App.icons.get('trash')} Zerar dados</button>
+      </div>`;
+    App.modal.open({
+      title: 'Ajustes',
+      bodyHtml,
+      onMount(dialog) {
+        dialog.addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-acao]');
+          if (!btn) return;
+          const fecha = executarAcao(btn.dataset.acao);
+          if (btn.dataset.acao === 'tema') {
+            // Atualiza o rótulo/ícone do tema dentro do próprio modal.
+            const novo = state.getTema();
+            dialog.querySelector('[data-role="ajustes-tema-icone"]').innerHTML = App.icons.get(TEMA_ICONE[novo]);
+            dialog.querySelector('[data-role="ajustes-tema-label"]').textContent = `Tema: ${TEMA_LABEL[novo]}`;
+          } else if (fecha) {
+            App.modal.close();
+          }
+        });
+      },
+    });
+  }
+
   function wireShellEvents() {
     const shell = document.getElementById('app-shell');
     shell.onclick = (e) => {
@@ -109,26 +184,7 @@
 
       const action = e.target.closest('[data-action]');
       if (!action) return;
-      switch (action.dataset.action) {
-        case 'tema':
-          state.setTema(TEMA_CICLO[state.getTema()]);
-          break;
-        case 'exportar':
-          App.storage.exportToFile(state.getData());
-          App.toast.show('Backup exportado.', 'sucesso');
-          break;
-        case 'importar':
-          document.getElementById('import-file-input').click();
-          break;
-        case 'zerar':
-          if (window.confirm('Isso apaga TODOS os gastos, receitas e notas fiscais guardados neste navegador. Exporte um backup antes, se quiser manter os dados. Continuar?')) {
-            state.resetAll();
-            App.toast.show('Dados zerados.', 'info');
-          }
-          break;
-        default:
-          break;
-      }
+      executarAcao(action.dataset.action);
     };
 
     document.getElementById('import-file-input').addEventListener('change', (e) => {
