@@ -17,6 +17,8 @@ App.views.receitas = (function () {
 
   let filtroAno = '';
 
+  const CATEGORIAS_RECEITA = ['Salário', 'Faturamento', 'Empréstimo', 'Extra', 'Outros'];
+
   function render(container) {
     const todas = state.getData().receitas.slice().sort((a, b) => (a.mesReferencia < b.mesReferencia ? 1 : -1));
     const anos = state.anosDisponiveis();
@@ -40,10 +42,11 @@ App.views.receitas = (function () {
 
       ${lista.length ? `
         <div class="data-list data-list--receitas">
-          <div class="data-list__header"><span>Mês de referência</span><span>Valor</span><span>Observação</span><span></span></div>
+          <div class="data-list__header"><span>Mês de referência</span><span>Categoria</span><span>Valor</span><span>Observação</span><span></span></div>
           ${lista.map((r) => `
             <div class="data-list__row">
               <span>${utils.escapeHtml(utils.monthRefToLabel(r.mesReferencia))}</span>
+              <span>${r.categoria ? `<span class="pill pill--pendente">${utils.escapeHtml(r.categoria)}</span>` : '—'}</span>
               <span class="valor-mono">${utils.formatCurrency(r.valor)}</span>
               <span>${utils.escapeHtml(r.observacao || '—')}</span>
               <span class="data-list__acoes">
@@ -58,17 +61,44 @@ App.views.receitas = (function () {
   }
 
   function abrirModalReceita(receitaExistente) {
-    const r = receitaExistente || { mesReferencia: utils.currentMonthRef(), valor: '', observacao: '' };
+    const r = receitaExistente || { mesReferencia: utils.currentMonthRef(), valor: '', observacao: '', categoria: 'Salário' };
+    const catAtual = r.categoria || 'Salário';
     const bodyHtml = `
       <form class="form" data-form="receita">
         <div class="form__row form__row--2">
+          <label>Categoria
+            <select name="categoria">
+              ${CATEGORIAS_RECEITA.map((c) => `<option value="${c}" ${c === catAtual ? 'selected' : ''}>${c}</option>`).join('')}
+            </select>
+          </label>
           <label>Mês de referência
             <input type="month" name="mesReferencia" required value="${r.mesReferencia}" />
           </label>
-          <label>Valor (R$)
+        </div>
+        <div class="form__row">
+          <label><span data-role="valor-label">Valor (R$)</span>
             <input type="number" name="valor" step="0.01" min="0" required value="${r.valor}" />
           </label>
         </div>
+
+        ${receitaExistente ? '' : `
+        <div class="is-hidden" data-field-wrap="emprestimo">
+          <p class="info-banner">Empréstimo: além de lançar o valor recebido na receita, o app cria as parcelas automaticamente na tela de Gastos.</p>
+          <div class="form__row form__row--2">
+            <label>Nº de parcelas
+              <input type="number" name="parcelas" min="1" max="120" value="12" />
+            </label>
+            <label>Valor de cada parcela (R$)
+              <input type="number" name="valorParcela" step="0.01" min="0" />
+            </label>
+          </div>
+          <div class="form__row">
+            <label>Vencimento da 1ª parcela
+              <input type="date" name="vencimentoParcela" value="${utils.todayISO()}" />
+            </label>
+          </div>
+        </div>`}
+
         <div class="form__row">
           <label>Observação (opcional)
             <input type="text" name="observacao" placeholder="Ex.: Salário + extra de freelance" value="${utils.escapeHtml(r.observacao || '')}" />
@@ -85,21 +115,63 @@ App.views.receitas = (function () {
       bodyHtml,
       onMount(dialog) {
         const form = dialog.querySelector('form');
+        const categoriaSelect = form.elements.categoria;
+        const emprestimoWrap = dialog.querySelector('[data-field-wrap="emprestimo"]');
+        const valorLabel = dialog.querySelector('[data-role="valor-label"]');
+
+        function atualizarEmprestimo() {
+          const ehEmprestimo = categoriaSelect.value === 'Empréstimo';
+          if (emprestimoWrap) emprestimoWrap.classList.toggle('is-hidden', !ehEmprestimo);
+          if (valorLabel) valorLabel.textContent = ehEmprestimo ? 'Valor recebido do empréstimo (R$)' : 'Valor (R$)';
+        }
+        categoriaSelect.addEventListener('change', atualizarEmprestimo);
+        atualizarEmprestimo();
+
         form.onsubmit = (e) => {
           e.preventDefault();
           const fd = new FormData(form);
+          const categoria = fd.get('categoria');
           const payload = {
             mesReferencia: fd.get('mesReferencia'),
             valor: Number(fd.get('valor')) || 0,
             observacao: String(fd.get('observacao') || '').trim(),
+            categoria,
           };
           if (receitaExistente) {
             state.updateReceita(receitaExistente.id, payload);
             App.toast.show('Receita atualizada.', 'sucesso');
-          } else {
-            state.addReceita(payload);
-            App.toast.show('Receita adicionada.', 'sucesso');
+            App.modal.close();
+            return;
           }
+
+          state.addReceita(payload);
+
+          // Empréstimo: gera as parcelas automaticamente nos Gastos.
+          if (categoria === 'Empréstimo') {
+            const parcelas = Math.max(1, Math.min(120, Number(fd.get('parcelas')) || 1));
+            const valorParcela = Number(fd.get('valorParcela')) || 0;
+            const vencimento = fd.get('vencimentoParcela') || utils.todayISO();
+            if (valorParcela > 0) {
+              const categoriaId = state.addCategoria('Empréstimo').id;
+              const descricao = payload.observacao ? `Empréstimo — ${payload.observacao}` : 'Empréstimo';
+              const criados = state.addGastosLote({
+                descricao,
+                categoriaId,
+                tipo: 'fixo',
+                valor: valorParcela,
+                desconto: 0,
+                vencimento,
+                mesReferencia: utils.monthRefFromDate(vencimento),
+                status: 'pendente',
+                dataPagamento: '',
+                observacao: '',
+              }, { modo: 'parcelado', quantidade: parcelas });
+              App.toast.show(`Receita lançada + ${criados.length} parcelas criadas nos Gastos.`, 'sucesso');
+              App.modal.close();
+              return;
+            }
+          }
+          App.toast.show('Receita adicionada.', 'sucesso');
           App.modal.close();
         };
       },

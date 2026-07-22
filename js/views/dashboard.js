@@ -151,6 +151,7 @@ App.views.dashboard = (function () {
     const media3 = state.mediaDespesasMesesAnteriores(mes, 3);
     const vsMediaPct = (media3 && media3 > 0) ? ((resumo.totalAposDescontos - media3) / media3) * 100 : null;
     const vsMediaSentido = vsMediaPct == null ? 'neutro' : (vsMediaPct > 0 ? 'negativo' : 'positivo');
+    const insights = state.gerarInsights(mes);
 
     container.innerHTML = `
       <div class="dashboard-hero-glow" aria-hidden="true"></div>
@@ -192,6 +193,18 @@ App.views.dashboard = (function () {
           footer: media3 == null ? '' : `<div class="stat-tile__note">média: ${utils.formatCurrency(media3)}</div>`,
         })}
       </section>
+
+      ${insights.length ? `
+      <section class="card">
+        <h2><span class="h2-icon h2-icon--accent">${App.icons.get('sparkles')}</span> Insights</h2>
+        <ul class="insights">
+          ${insights.map((it) => `
+            <li class="insight insight--${it.tom}">
+              <span class="insight__icon">${App.icons.get(it.tom === 'good' ? 'thumbs-up' : it.tom === 'warning' ? 'alert-triangle' : 'info')}</span>
+              <span class="insight__texto">${utils.escapeHtml(it.texto)}</span>
+            </li>`).join('')}
+        </ul>
+      </section>` : ''}
 
       <section class="card">
         <div class="card__header-row">

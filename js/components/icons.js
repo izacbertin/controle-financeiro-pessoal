@@ -31,6 +31,9 @@ App.icons = (function () {
     calendar: '<rect x="4" y="5" width="16" height="16" rx="2"/><line x1="4" y1="9" x2="20" y2="9"/><line x1="9" y1="3" x2="9" y2="6"/><line x1="15" y1="3" x2="15" y2="6"/>',
     gauge: '<path d="M4 15a8 8 0 0 1 16 0"/><line x1="12" y1="15" x2="15.5" y2="11.5"/><circle cx="12" cy="15" r="1"/>',
     activity: '<polyline points="3 12 8 12 10.5 5 14 19 16.5 12 21 12"/>',
+    sparkles: '<path d="M12 3l1.8 4.9L18.7 9.7l-4.9 1.8L12 16.4l-1.8-4.9L5.3 9.7l4.9-1.8z"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/>',
+    'thumbs-up': '<path d="M7 11v9H4a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1z"/><path d="M7 11l4.5-8a2 2 0 0 1 3.8 1.3L14 9h5.5a2 2 0 0 1 2 2.4l-1.4 7A2 2 0 0 1 18 20H7"/>',
+    info: '<circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="7.8" r="0.6" fill="currentColor" stroke="none"/>',
 
     // Ações
     plus: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',

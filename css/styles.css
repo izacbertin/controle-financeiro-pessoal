@@ -1286,7 +1286,7 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
   overflow-x: auto;
   overflow-y: hidden;
 }
-.data-list--receitas { grid-template-columns: 1.2fr 1fr 2fr auto; }
+.data-list--receitas { grid-template-columns: 1.1fr 0.9fr 1fr 1.4fr auto; }
 .data-list--nfs { grid-template-columns: 1fr 1.2fr 1fr 1fr auto; }
 
 .data-list__header, .data-list__row { display: contents; }
@@ -1309,6 +1309,35 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 .data-list__acoes { gap: 4px; justify-content: flex-end; }
 .valor-mono { font-variant-numeric: tabular-nums; }
 
+/* Fatura de cartão (linha agrupadora expansível). display:contents faz o
+   cabeçalho e os membros participarem do mesmo grid da lista. */
+.fatura { display: contents; }
+.fatura__head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: var(--track-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 14px;
+  text-align: left;
+  transition: background var(--transition);
+}
+.fatura__head:hover { background: var(--accent-wash); }
+.fatura__chevron { display: inline-flex; color: var(--text-secondary); transition: transform var(--transition); }
+.fatura__chevron .icon { width: 16px; height: 16px; vertical-align: 0; }
+.fatura__chevron.is-open { transform: rotate(90deg); }
+.fatura__nome { font-weight: 600; }
+.fatura__meta { color: var(--text-muted); font-size: 12px; }
+.fatura__total { margin-left: auto; font-weight: 600; }
+.data-list__row--membro > span { background: rgba(128, 128, 128, 0.05); }
+.data-list__row--membro > .data-list__descricao { padding-left: calc(var(--space-4) + 18px); }
+
 @media (max-width: 880px) {
   .data-list { display: block; overflow-x: visible; }
   .data-list__header { display: none; }
@@ -1327,6 +1356,8 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
     white-space: normal;
   }
   .data-list__acoes { position: absolute; top: var(--space-3); right: var(--space-4); display: flex; }
+  .data-list__row--membro { border-left: 3px solid var(--accent-wash); }
+  .data-list__row--membro > span { background: none; }
 }
 
 .pill {
@@ -1383,6 +1414,17 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 /* Modal de Ajustes (mobile): ações empilhadas em largura cheia. */
 .ajustes { display: flex; flex-direction: column; gap: 10px; }
 .ajustes .button--full.button--icon { justify-content: flex-start; padding: 12px 16px; }
+
+/* Insights do Painel */
+.insights { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.insight { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.4; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--track-bg); }
+.insight__icon { display: inline-flex; flex-shrink: 0; margin-top: 1px; }
+.insight__icon .icon { width: 18px; height: 18px; vertical-align: 0; }
+.insight--good { background: var(--status-good-bg); }
+.insight--good .insight__icon { color: var(--status-good); }
+.insight--warning { background: var(--status-critical-bg); }
+.insight--warning .insight__icon { color: var(--status-critical); }
+.insight--info .insight__icon { color: var(--accent); }
 .is-hidden { display: none !important; }
 
 /* ---------------------------------------------------------------------

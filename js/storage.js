@@ -37,6 +37,8 @@ App.storage = (function () {
       notasFiscais: [],
       // Teto de gasto mensal por categoria: { [categoriaId]: valorMensal }.
       orcamentos: {},
+      // Cartões de crédito cadastrados (nomes), p/ agrupar gastos em faturas.
+      cartoes: [],
       // tema + config do MEI (limite anual e mês de abertura p/ rateio do 1º ano)
       preferencias: { tema: 'sistema', mei: { limiteAnual: 81000, abertura: '' } },
     };
@@ -54,6 +56,7 @@ App.storage = (function () {
       receitas: Array.isArray(data.receitas) ? data.receitas : [],
       notasFiscais: Array.isArray(data.notasFiscais) ? data.notasFiscais : [],
       orcamentos: (data.orcamentos && typeof data.orcamentos === 'object') ? data.orcamentos : {},
+      cartoes: Array.isArray(data.cartoes) ? data.cartoes : [],
       preferencias: normalizarPreferencias(data.preferencias),
     };
   }

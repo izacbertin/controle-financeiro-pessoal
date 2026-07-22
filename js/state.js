@@ -146,6 +146,26 @@ App.state = (function () {
   }
 
   // ---------------------------------------------------------------------
+  // Cartões de crédito (nomes) — usados p/ agrupar gastos em faturas
+  // ---------------------------------------------------------------------
+
+  function listCartoes() {
+    return (data.cartoes || []).slice().sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  }
+
+  function addCartao(nome) {
+    const limpo = (nome || '').trim();
+    if (!limpo) return null;
+    if (!data.cartoes) data.cartoes = [];
+    const existe = data.cartoes.find((c) => c.toLowerCase() === limpo.toLowerCase());
+    if (existe) return existe;
+    data.cartoes.push(limpo);
+    persist();
+    notify();
+    return limpo;
+  }
+
+  // ---------------------------------------------------------------------
   // Gastos
   // ---------------------------------------------------------------------
 
@@ -540,9 +560,19 @@ App.state = (function () {
     return ((atual - passado) / passado) * 100;
   }
 
-  // Série dos últimos `meses` (padrão 12) meses terminando em mesReferencia.
+  // Série de `meses` (padrão 12) para o gráfico de evolução. A janela termina
+  // no MAIS TARDE entre o mês selecionado e o último mês que já tem dados —
+  // assim, se há lançamentos em meses futuros (ex.: contas/receitas já
+  // programadas), a curva aparece sem o usuário precisar avançar o filtro.
   function evolucaoMensal(mesReferencia, meses) {
-    const labels = utils.last12Months(mesReferencia).slice(-1 * (meses || 12));
+    const qtd = meses || 12;
+    // Ancora no último mês com GASTOS lançados (dado real), não em receitas —
+    // que podem estar projetadas muito à frente e "esticariam" o gráfico.
+    const mesesGasto = data.gastos.map((g) => g.mesReferencia).filter(Boolean);
+    const ultimoComDados = mesesGasto.length ? mesesGasto.slice().sort().pop() : mesReferencia;
+    // fim = o maior (mais recente) entre o mês selecionado e o último com dados
+    const fim = mesReferencia > ultimoComDados ? mesReferencia : ultimoComDados;
+    const labels = utils.last12Months(fim).slice(-1 * qtd);
     return {
       labels,
       receitas: labels.map((m) => receitaDoMes(m)),
@@ -552,6 +582,83 @@ App.state = (function () {
 
   function topCategorias(lista, limite) {
     return gastosPorCategoria(lista).slice(0, limite || 5);
+  }
+
+  // Soma do gasto líquido por categoria no mês, só até um dia de corte (usa o
+  // dia do vencimento). Permite comparar "o que já comprometi até o dia X".
+  function gastoPorCategoriaAteDia(mesReferencia, diaCorte) {
+    const mapa = new Map();
+    gastosDoMes(mesReferencia).forEach((g) => {
+      const dia = Number((g.vencimento || '').slice(8, 10)) || 31;
+      if (dia <= diaCorte) mapa.set(g.categoriaId, (mapa.get(g.categoriaId) || 0) + valorLiquido(g));
+    });
+    return mapa;
+  }
+
+  // Gera "insights" (frases curtas) pro Painel: compara o gasto por categoria
+  // do mês (até o dia de hoje, se for o mês corrente) com a média dos últimos
+  // 3 meses no mesmo período, além de elogios/alertas gerais. Devolve uma lista
+  // de { tom: 'good'|'warning'|'info', texto }, já priorizada e limitada.
+  function gerarInsights(mesReferencia) {
+    const insights = [];
+    const ehMesAtual = mesReferencia === utils.currentMonthRef();
+    const diaCorte = ehMesAtual ? Number(utils.todayISO().slice(8, 10)) : 31;
+    const sufixoPeriodo = ehMesAtual ? ` (até o dia ${diaCorte})` : '';
+
+    // Alertas gerais primeiro (mais acionáveis).
+    const r = resumoMensal(mesReferencia);
+    if (r.saldoDoMes < 0) {
+      insights.push({ tom: 'warning', texto: `Atenção: neste mês as despesas já passaram a receita lançada em ${utils.formatCurrency(-r.saldoDoMes)}.` });
+    }
+    orcamentoStatusDoMes(mesReferencia).filter((o) => o.estourou).slice(0, 1).forEach((o) => {
+      insights.push({ tom: 'warning', texto: `${o.nome} estourou o orçamento do mês (${utils.formatCurrency(o.gasto)} de ${utils.formatCurrency(o.limite)}).` });
+    });
+
+    // Comparação por categoria vs média dos 3 meses anteriores (mesmo período).
+    let mesesBase = 0;
+    for (let i = 1; i <= 3; i++) if (gastosDoMes(utils.addMonths(mesReferencia, -i)).length) mesesBase++;
+    if (mesesBase > 0) {
+      const atual = gastoPorCategoriaAteDia(mesReferencia, diaCorte);
+      const somaAnterior = new Map();
+      for (let i = 1; i <= 3; i++) {
+        gastoPorCategoriaAteDia(utils.addMonths(mesReferencia, -i), diaCorte)
+          .forEach((v, cat) => somaAnterior.set(cat, (somaAnterior.get(cat) || 0) + v));
+      }
+      const comparacoes = [];
+      const categoriasEnvolvidas = new Set([...atual.keys(), ...somaAnterior.keys()]);
+      categoriasEnvolvidas.forEach((cat) => {
+        const valorAtual = atual.get(cat) || 0;
+        const media = (somaAnterior.get(cat) || 0) / mesesBase;
+        if (media < 50 && valorAtual < 50) return; // ignora valores pequenos (ruído)
+        const delta = valorAtual - media;
+        const pct = media > 0 ? (delta / media) * 100 : (valorAtual > 0 ? 100 : 0);
+        if (Math.abs(delta) >= 30 && Math.abs(pct) >= 20) {
+          comparacoes.push({ cat, nome: categoriaNome(cat), delta, pct });
+        }
+      });
+      comparacoes.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+      comparacoes.slice(0, 2).forEach((c) => {
+        if (c.delta > 0) {
+          insights.push({ tom: 'warning', texto: `Você está gastando ${utils.formatPercent(Math.abs(c.pct), 0)} a mais em ${c.nome} que a média dos últimos meses${sufixoPeriodo}.` });
+        } else {
+          insights.push({ tom: 'good', texto: `Parabéns! Você gastou ${utils.formatPercent(Math.abs(c.pct), 0)} a menos em ${c.nome} que a média dos últimos meses${sufixoPeriodo}.` });
+        }
+      });
+    }
+
+    // Elogio de poupança e aviso de vencimentos próximos.
+    if (r.taxaPoupanca != null && r.taxaPoupanca >= 20 && r.saldoDoMes >= 0) {
+      insights.push({ tom: 'good', texto: `Você está poupando ${utils.formatPercent(r.taxaPoupanca, 0)} da sua receita este mês. 👏` });
+    }
+    if (ehMesAtual) {
+      const proximos = proximosVencimentos(7);
+      const totalProximos = utils.sum(proximos, valorLiquido);
+      if (totalProximos > 0) {
+        insights.push({ tom: 'info', texto: `Você tem ${utils.formatCurrency(totalProximos)} vencendo nos próximos 7 dias (${proximos.length} conta${proximos.length === 1 ? '' : 's'}).` });
+      }
+    }
+
+    return insights.slice(0, 4);
   }
 
   function notasFiscaisDoAno(ano) {
@@ -573,7 +680,7 @@ App.state = (function () {
   return {
     init, getData, getUI, setUI, subscribe, replaceData, resetAll, getTema, setTema,
     getMeiConfig, setMeiConfig, limiteMeiDoAno,
-    listCategorias, categoriaNome, addCategoria,
+    listCategorias, categoriaNome, addCategoria, listCartoes, addCartao,
     addGasto, addGastosLote, updateGasto, deleteGasto, marcarGastoPago, marcarGastoPendente,
     addReceita, updateReceita, deleteReceita, receitaDoMes,
     addNotaFiscal, updateNotaFiscal, deleteNotaFiscal,
@@ -582,6 +689,6 @@ App.state = (function () {
     valorLiquido, gastosDoMes, gastosDoAno, totais, gastosPorCategoria,
     comparativoFixoVariavel, gastosAtrasados, proximosVencimentos,
     resumoMensal, resumoAnual, variacaoMesAnterior, mediaDespesasMesesAnteriores, evolucaoMensal,
-    topCategorias, notasFiscaisDoAno, anosDisponiveis,
+    topCategorias, notasFiscaisDoAno, anosDisponiveis, gerarInsights,
   };
 })();

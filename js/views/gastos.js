@@ -13,6 +13,33 @@ App.views.gastos = (function () {
   let debounceBusca = null;
 
   const NOVA_CATEGORIA_VALOR = '__nova__';
+  const NOVO_CARTAO_VALOR = '__novo_cartao__';
+  const faturasExpandidas = new Set(); // chaves "cartao||mes" abertas na lista
+
+  // Descrições já usadas (únicas, mais recentes primeiro) para sugerir no
+  // autocomplete e agilizar lançamentos repetidos (ex.: "Auto Posto Lavras").
+  function descricoesUsadas() {
+    const vistas = new Set();
+    const lista = [];
+    state.getData().gastos
+      .slice()
+      .sort((a, b) => (a.vencimento < b.vencimento ? 1 : -1))
+      .forEach((g) => {
+        const d = (g.descricao || '').trim();
+        const chave = d.toLowerCase();
+        if (d && !vistas.has(chave)) { vistas.add(chave); lista.push(d); }
+      });
+    return lista;
+  }
+
+  // Último gasto com a mesma descrição — usado pra pré-preencher categoria/tipo.
+  function ultimoGastoPorDescricao(descricao) {
+    const alvo = (descricao || '').trim().toLowerCase();
+    if (!alvo) return null;
+    return state.getData().gastos
+      .filter((g) => (g.descricao || '').trim().toLowerCase() === alvo)
+      .sort((a, b) => (a.vencimento < b.vencimento ? 1 : -1))[0] || null;
+  }
 
   function mesesDisponiveis() {
     const meses = new Set();
@@ -94,38 +121,77 @@ App.views.gastos = (function () {
     wireEvents(container);
   }
 
+  // HTML de uma linha de gasto (usada solta ou como membro de uma fatura).
+  function linhaGastoHtml(g, membro) {
+    const statusEfetivo = state.statusEfetivo(g);
+    return `
+      <div class="data-list__row${membro ? ' data-list__row--membro' : ''}">
+        <span class="data-list__descricao">
+          ${utils.escapeHtml(g.descricao)}
+          ${g.observacao ? `<span class="data-list__obs">${utils.escapeHtml(g.observacao)}</span>` : ''}
+        </span>
+        <span class="data-list__categoria"><span class="cat-icon">${App.icons.forCategoria(state.categoriaNome(g.categoriaId))}</span>${utils.escapeHtml(state.categoriaNome(g.categoriaId))}</span>
+        <span>${g.tipo === 'fixo' ? 'Fixo' : 'Variável'}</span>
+        <span class="valor-mono">${utils.formatCurrency(state.valorLiquido(g))}</span>
+        <span>${utils.formatDate(g.vencimento)}</span>
+        <span>${utils.escapeHtml(utils.monthRefToShortLabel(g.mesReferencia))}</span>
+        <span><span class="pill pill--${statusEfetivo}">${utils.statusLabel(statusEfetivo)}</span></span>
+        <span class="data-list__acoes">
+          ${g.status === 'pendente'
+            ? `<button type="button" class="icon-button" title="Marcar como pago" data-action="pagar" data-id="${g.id}">${App.icons.get('check')}</button>`
+            : `<button type="button" class="icon-button" title="Marcar como pendente" data-action="rependente" data-id="${g.id}">${App.icons.get('undo')}</button>`}
+          <button type="button" class="icon-button" title="Editar" data-action="editar" data-id="${g.id}">${App.icons.get('pencil')}</button>
+          <button type="button" class="icon-button" title="Excluir" data-action="excluir" data-id="${g.id}">${App.icons.get('trash')}</button>
+        </span>
+      </div>`;
+  }
+
   function renderLista(lista) {
     if (!lista.length) {
       return '<p class="empty-hint empty-hint--block">Nenhum gasto encontrado com os filtros atuais.</p>';
     }
+
+    // Separa gastos atrelados a cartão (agrupados em "faturas" por cartão+mês)
+    // dos gastos avulsos. As faturas aparecem no topo; cada uma pode ser
+    // expandida pra ver os lançamentos.
+    const grupos = new Map();
+    const avulsos = [];
+    lista.forEach((g) => {
+      if (g.cartao) {
+        const chave = `${g.cartao}||${g.mesReferencia}`;
+        if (!grupos.has(chave)) grupos.set(chave, { chave, cartao: g.cartao, mes: g.mesReferencia, itens: [] });
+        grupos.get(chave).itens.push(g);
+      } else {
+        avulsos.push(g);
+      }
+    });
+
+    const faturasHtml = Array.from(grupos.values())
+      .sort((a, b) => (a.mes < b.mes ? 1 : -1))
+      .map((grp) => {
+        const total = utils.sum(grp.itens, state.valorLiquido);
+        const pendentes = grp.itens.filter((g) => g.status === 'pendente').length;
+        const aberta = faturasExpandidas.has(grp.chave);
+        return `
+          <div class="fatura">
+            <button type="button" class="fatura__head" data-action="toggle-fatura" data-key="${utils.escapeHtml(grp.chave)}">
+              <span class="fatura__chevron ${aberta ? 'is-open' : ''}">${App.icons.get('chevron-right')}</span>
+              <span class="cat-icon">${App.icons.get('cat-cartao')}</span>
+              <span class="fatura__nome">Fatura ${utils.escapeHtml(grp.cartao)} · ${utils.escapeHtml(utils.monthRefToShortLabel(grp.mes))}</span>
+              <span class="fatura__meta">${grp.itens.length} lanç.${pendentes ? ` · ${pendentes} pend.` : ''}</span>
+              <span class="fatura__total valor-mono">${utils.formatCurrency(total)}</span>
+            </button>
+            ${aberta ? grp.itens.map((g) => linhaGastoHtml(g, true)).join('') : ''}
+          </div>`;
+      }).join('');
+
     return `
       <div class="data-list">
         <div class="data-list__header">
           <span>Descrição</span><span>Categoria</span><span>Tipo</span><span>Valor</span><span>Vencimento</span><span>Mês ref.</span><span>Status</span><span></span>
         </div>
-        ${lista.map((g) => {
-          const statusEfetivo = state.statusEfetivo(g);
-          return `
-          <div class="data-list__row">
-            <span class="data-list__descricao">
-              ${utils.escapeHtml(g.descricao)}
-              ${g.observacao ? `<span class="data-list__obs">${utils.escapeHtml(g.observacao)}</span>` : ''}
-            </span>
-            <span class="data-list__categoria"><span class="cat-icon">${App.icons.forCategoria(state.categoriaNome(g.categoriaId))}</span>${utils.escapeHtml(state.categoriaNome(g.categoriaId))}</span>
-            <span>${g.tipo === 'fixo' ? 'Fixo' : 'Variável'}</span>
-            <span class="valor-mono">${utils.formatCurrency(state.valorLiquido(g))}</span>
-            <span>${utils.formatDate(g.vencimento)}</span>
-            <span>${utils.escapeHtml(utils.monthRefToShortLabel(g.mesReferencia))}</span>
-            <span><span class="pill pill--${statusEfetivo}">${utils.statusLabel(statusEfetivo)}</span></span>
-            <span class="data-list__acoes">
-              ${g.status === 'pendente'
-                ? `<button type="button" class="icon-button" title="Marcar como pago" data-action="pagar" data-id="${g.id}">${App.icons.get('check')}</button>`
-                : `<button type="button" class="icon-button" title="Marcar como pendente" data-action="rependente" data-id="${g.id}">${App.icons.get('undo')}</button>`}
-              <button type="button" class="icon-button" title="Editar" data-action="editar" data-id="${g.id}">${App.icons.get('pencil')}</button>
-              <button type="button" class="icon-button" title="Excluir" data-action="excluir" data-id="${g.id}">${App.icons.get('trash')}</button>
-            </span>
-          </div>`;
-        }).join('')}
+        ${faturasHtml}
+        ${avulsos.map((g) => linhaGastoHtml(g, false)).join('')}
       </div>`;
   }
 
@@ -151,7 +217,10 @@ App.views.gastos = (function () {
       <form class="form" data-form="gasto">
         <div class="form__row">
           <label>Descrição
-            <input type="text" name="descricao" required value="${utils.escapeHtml(g.descricao)}" placeholder="Ex.: Nubank" />
+            <input type="text" name="descricao" required value="${utils.escapeHtml(g.descricao)}" placeholder="Ex.: Nubank" list="descricoes-usadas" autocomplete="off" />
+            <datalist id="descricoes-usadas">
+              ${descricoesUsadas().map((d) => `<option value="${utils.escapeHtml(d)}"></option>`).join('')}
+            </datalist>
           </label>
         </div>
 
@@ -173,6 +242,19 @@ App.views.gastos = (function () {
         <div class="form__row is-hidden" data-field-wrap="novaCategoria">
           <label>Nome da nova categoria
             <input type="text" name="novaCategoria" placeholder="Ex.: Educação" />
+          </label>
+        </div>
+
+        <div class="form__row form__row--2">
+          <label>Cartão de crédito (opcional)
+            <select name="cartao">
+              <option value="" ${!g.cartao ? 'selected' : ''}>Nenhum</option>
+              ${state.listCartoes().map((c) => `<option value="${utils.escapeHtml(c)}" ${g.cartao === c ? 'selected' : ''}>${utils.escapeHtml(c)}</option>`).join('')}
+              <option value="${NOVO_CARTAO_VALOR}">+ Novo cartão…</option>
+            </select>
+          </label>
+          <label class="is-hidden" data-field-wrap="novoCartao">Nome do novo cartão
+            <input type="text" name="novoCartao" placeholder="Ex.: PicPay" />
           </label>
         </div>
 
@@ -251,6 +333,24 @@ App.views.gastos = (function () {
           dataPagamentoWrap.classList.toggle('is-hidden', statusSelect.value !== 'pago');
         });
 
+        const cartaoSelect = form.elements.cartao;
+        const novoCartaoWrap = dialog.querySelector('[data-field-wrap="novoCartao"]');
+        cartaoSelect.addEventListener('change', () => {
+          novoCartaoWrap.classList.toggle('is-hidden', cartaoSelect.value !== NOVO_CARTAO_VALOR);
+        });
+
+        // Autocomplete: ao digitar/escolher uma descrição já usada, pré-preenche
+        // categoria e tipo com base no último lançamento igual (só ao CRIAR, e
+        // só se a categoria ainda não foi escolhida — não atrapalha edição).
+        if (!gastoExistente) {
+          form.elements.descricao.addEventListener('change', () => {
+            const anterior = ultimoGastoPorDescricao(form.elements.descricao.value);
+            if (!anterior) return;
+            if (!categoriaSelect.value) categoriaSelect.value = anterior.categoriaId;
+            form.elements.tipo.value = anterior.tipo;
+          });
+        }
+
         // Repetição (só existe ao criar): mostra/oculta a quantidade e ajusta
         // o rótulo/dica conforme "mensal" ou "parcelado".
         const repeticaoModo = form.elements.repeticaoModo;
@@ -284,6 +384,12 @@ App.views.gastos = (function () {
             }
             categoriaId = state.addCategoria(nome).id;
           }
+          let cartao = fd.get('cartao') || '';
+          if (cartao === NOVO_CARTAO_VALOR) {
+            const nomeCartao = String(fd.get('novoCartao') || '').trim();
+            if (!nomeCartao) { form.elements.novoCartao.focus(); return; }
+            cartao = state.addCartao(nomeCartao);
+          }
           const status = fd.get('status');
           const payload = {
             descricao: String(fd.get('descricao') || '').trim(),
@@ -296,6 +402,7 @@ App.views.gastos = (function () {
             status,
             dataPagamento: status === 'pago' ? (fd.get('dataPagamento') || utils.todayISO()) : '',
             observacao: String(fd.get('observacao') || '').trim(),
+            cartao,
           };
           if (gastoExistente) {
             state.updateGasto(gastoExistente.id, payload);
@@ -332,7 +439,13 @@ App.views.gastos = (function () {
       const btn = e.target.closest('[data-action]');
       if (!btn) return;
       const { action, id } = btn.dataset;
-      if (action === 'novo-gasto') abrirModalGasto(null);
+      if (action === 'toggle-fatura') {
+        const key = btn.dataset.key;
+        if (faturasExpandidas.has(key)) faturasExpandidas.delete(key);
+        else faturasExpandidas.add(key);
+        render(container);
+      }
+      else if (action === 'novo-gasto') abrirModalGasto(null);
       else if (action === 'editar') abrirModalGasto(state.getData().gastos.find((g) => g.id === id));
       else if (action === 'pagar') { state.marcarGastoPago(id); App.toast.show('Gasto marcado como pago.', 'sucesso'); }
       else if (action === 'rependente') state.marcarGastoPendente(id);
