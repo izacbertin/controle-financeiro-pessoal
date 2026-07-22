@@ -16,6 +16,41 @@ App.views.gastos = (function () {
   const NOVO_CARTAO_VALOR = '__novo_cartao__';
   const faturasExpandidas = new Set(); // chaves "cartao||mes" abertas na lista
 
+  // Ordenação da lista por coluna (clicando no cabeçalho). Padrão: vencimento
+  // do mais recente pro mais antigo.
+  let ordenacao = { coluna: 'vencimento', dir: 'desc' };
+
+  function valorOrdenacao(g, coluna) {
+    switch (coluna) {
+      case 'descricao': return (g.descricao || '').toLowerCase();
+      case 'categoria': return state.categoriaNome(g.categoriaId).toLowerCase();
+      case 'tipo': return g.tipo || '';
+      case 'valor': return state.valorLiquido(g);
+      case 'mesReferencia': return g.mesReferencia || '';
+      case 'status': return state.statusEfetivo(g);
+      case 'vencimento':
+      default: return g.vencimento || '';
+    }
+  }
+
+  function ordenarLista(lista) {
+    const mult = ordenacao.dir === 'asc' ? 1 : -1;
+    return lista.slice().sort((a, b) => {
+      const va = valorOrdenacao(a, ordenacao.coluna);
+      const vb = valorOrdenacao(b, ordenacao.coluna);
+      if (va < vb) return -1 * mult;
+      if (va > vb) return 1 * mult;
+      return 0;
+    });
+  }
+
+  // Cabeçalho clicável com indicador de ordenação (▲/▼).
+  function th(coluna, rotulo) {
+    const ativo = ordenacao.coluna === coluna;
+    const seta = ativo ? (ordenacao.dir === 'asc' ? ' ▲' : ' ▼') : '';
+    return `<span class="th ${ativo ? 'is-sorted' : ''}" data-sort="${coluna}">${rotulo}${seta}</span>`;
+  }
+
   // Descrições já usadas (únicas, mais recentes primeiro) para sugerir no
   // autocomplete e agilizar lançamentos repetidos (ex.: "Auto Posto Lavras").
   function descricoesUsadas() {
@@ -146,10 +181,11 @@ App.views.gastos = (function () {
       </div>`;
   }
 
-  function renderLista(lista) {
-    if (!lista.length) {
+  function renderLista(listaOriginal) {
+    if (!listaOriginal.length) {
       return '<p class="empty-hint empty-hint--block">Nenhum gasto encontrado com os filtros atuais.</p>';
     }
+    const lista = ordenarLista(listaOriginal);
 
     // Separa gastos atrelados a cartão (agrupados em "faturas" por cartão+mês)
     // dos gastos avulsos. As faturas aparecem no topo; cada uma pode ser
@@ -188,7 +224,7 @@ App.views.gastos = (function () {
     return `
       <div class="data-list">
         <div class="data-list__header">
-          <span>Descrição</span><span>Categoria</span><span>Tipo</span><span>Valor</span><span>Vencimento</span><span>Mês ref.</span><span>Status</span><span></span>
+          ${th('descricao', 'Descrição')}${th('categoria', 'Categoria')}${th('tipo', 'Tipo')}${th('valor', 'Valor')}${th('vencimento', 'Vencimento')}${th('mesReferencia', 'Mês ref.')}${th('status', 'Status')}<span></span>
         </div>
         ${faturasHtml}
         ${avulsos.map((g) => linhaGastoHtml(g, false)).join('')}
@@ -426,6 +462,19 @@ App.views.gastos = (function () {
 
   function wireEvents(container) {
     container.onclick = (e) => {
+      const cabecalho = e.target.closest('[data-sort]');
+      if (cabecalho) {
+        const col = cabecalho.dataset.sort;
+        if (ordenacao.coluna === col) {
+          ordenacao.dir = ordenacao.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+          // Texto começa em A→Z; número/data começam do maior/mais recente.
+          ordenacao = { coluna: col, dir: ['valor', 'vencimento', 'mesReferencia'].includes(col) ? 'desc' : 'asc' };
+        }
+        render(container);
+        return;
+      }
+
       const chip = e.target.closest('[data-toggle]');
       if (chip && chip.tagName === 'BUTTON') {
         const grupo = chip.dataset.toggle;

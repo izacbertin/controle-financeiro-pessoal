@@ -10,6 +10,32 @@ App.views.notasFiscais = (function () {
   const state = App.state;
 
   let filtroAno = String(utils.currentYear());
+  let ordenacao = { coluna: 'dataEmissao', dir: 'desc' };
+
+  function th(coluna, rotulo) {
+    const ativo = ordenacao.coluna === coluna;
+    const seta = ativo ? (ordenacao.dir === 'asc' ? ' ▲' : ' ▼') : '';
+    return `<span class="th ${ativo ? 'is-sorted' : ''}" data-sort="${coluna}">${rotulo}${seta}</span>`;
+  }
+
+  function ordenar(lista) {
+    const mult = ordenacao.dir === 'asc' ? 1 : -1;
+    const val = (n) => {
+      switch (ordenacao.coluna) {
+        case 'numero': { const x = Number(n.numero); return isNaN(x) ? (n.numero || '').toLowerCase() : x; }
+        case 'mesEmissao': return n.mesEmissao || '';
+        case 'valor': return n.valor || 0;
+        case 'dataEmissao':
+        default: return n.dataEmissao || '';
+      }
+    };
+    return lista.slice().sort((a, b) => {
+      const va = val(a); const vb = val(b);
+      if (va < vb) return -1 * mult;
+      if (va > vb) return 1 * mult;
+      return 0;
+    });
+  }
 
   // Card de acompanhamento do limite anual do MEI. O limite vem da config do
   // usuário (limiteMeiDoAno) — pode ser MEI comum, caminhoneiro ou custom, e
@@ -116,7 +142,8 @@ App.views.notasFiscais = (function () {
   function render(container) {
     const todas = state.getData().notasFiscais.slice().sort((a, b) => (a.dataEmissao < b.dataEmissao ? 1 : -1));
     const anos = state.anosDisponiveis();
-    const lista = filtroAno ? todas.filter((n) => utils.yearFromMonthRef(n.mesEmissao) === Number(filtroAno)) : todas;
+    const listaFiltrada = filtroAno ? todas.filter((n) => utils.yearFromMonthRef(n.mesEmissao) === Number(filtroAno)) : todas;
+    const lista = ordenar(listaFiltrada);
     const resumoAno = filtroAno ? state.notasFiscaisDoAno(Number(filtroAno)) : { quantidade: lista.length, total: utils.sum(lista, (n) => n.valor) };
     const anoMei = filtroAno ? Number(filtroAno) : utils.currentYear();
 
@@ -139,7 +166,7 @@ App.views.notasFiscais = (function () {
 
       ${lista.length ? `
         <div class="data-list data-list--nfs">
-          <div class="data-list__header"><span>Nº da NF</span><span>Mês de emissão</span><span>Data de emissão</span><span>Valor</span><span></span></div>
+          <div class="data-list__header">${th('numero', 'Nº da NF')}${th('mesEmissao', 'Mês de emissão')}${th('dataEmissao', 'Data de emissão')}${th('valor', 'Valor')}<span></span></div>
           ${lista.map((n) => `
             <div class="data-list__row">
               <span>${utils.escapeHtml(n.numero)}</span>
@@ -218,6 +245,14 @@ App.views.notasFiscais = (function () {
 
   function wireEvents(container) {
     container.onclick = (e) => {
+      const cabecalho = e.target.closest('[data-sort]');
+      if (cabecalho) {
+        const col = cabecalho.dataset.sort;
+        if (ordenacao.coluna === col) ordenacao.dir = ordenacao.dir === 'asc' ? 'desc' : 'asc';
+        else ordenacao = { coluna: col, dir: ['valor', 'dataEmissao', 'mesEmissao', 'numero'].includes(col) ? 'desc' : 'asc' };
+        render(container);
+        return;
+      }
       const btn = e.target.closest('[data-action]');
       if (!btn) return;
       const { action, id } = btn.dataset;

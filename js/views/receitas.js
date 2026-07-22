@@ -16,13 +16,40 @@ App.views.receitas = (function () {
   const state = App.state;
 
   let filtroAno = '';
+  let ordenacao = { coluna: 'mesReferencia', dir: 'desc' };
 
   const CATEGORIAS_RECEITA = ['Salário', 'Faturamento', 'Empréstimo', 'Extra', 'Outros'];
+
+  function th(coluna, rotulo) {
+    const ativo = ordenacao.coluna === coluna;
+    const seta = ativo ? (ordenacao.dir === 'asc' ? ' ▲' : ' ▼') : '';
+    return `<span class="th ${ativo ? 'is-sorted' : ''}" data-sort="${coluna}">${rotulo}${seta}</span>`;
+  }
+
+  function ordenar(lista) {
+    const mult = ordenacao.dir === 'asc' ? 1 : -1;
+    const val = (r) => {
+      switch (ordenacao.coluna) {
+        case 'categoria': return (r.categoria || '').toLowerCase();
+        case 'valor': return r.valor || 0;
+        case 'observacao': return (r.observacao || '').toLowerCase();
+        case 'mesReferencia':
+        default: return r.mesReferencia || '';
+      }
+    };
+    return lista.slice().sort((a, b) => {
+      const va = val(a); const vb = val(b);
+      if (va < vb) return -1 * mult;
+      if (va > vb) return 1 * mult;
+      return 0;
+    });
+  }
 
   function render(container) {
     const todas = state.getData().receitas.slice().sort((a, b) => (a.mesReferencia < b.mesReferencia ? 1 : -1));
     const anos = state.anosDisponiveis();
-    const lista = filtroAno ? todas.filter((r) => utils.yearFromMonthRef(r.mesReferencia) === Number(filtroAno)) : todas;
+    const listaFiltrada = filtroAno ? todas.filter((r) => utils.yearFromMonthRef(r.mesReferencia) === Number(filtroAno)) : todas;
+    const lista = ordenar(listaFiltrada);
     const total = utils.sum(lista, (r) => r.valor);
 
     container.innerHTML = `
@@ -42,7 +69,7 @@ App.views.receitas = (function () {
 
       ${lista.length ? `
         <div class="data-list data-list--receitas">
-          <div class="data-list__header"><span>Mês de referência</span><span>Categoria</span><span>Valor</span><span>Observação</span><span></span></div>
+          <div class="data-list__header">${th('mesReferencia', 'Mês de referência')}${th('categoria', 'Categoria')}${th('valor', 'Valor')}${th('observacao', 'Observação')}<span></span></div>
           ${lista.map((r) => `
             <div class="data-list__row">
               <span>${utils.escapeHtml(utils.monthRefToLabel(r.mesReferencia))}</span>
@@ -180,6 +207,14 @@ App.views.receitas = (function () {
 
   function wireEvents(container) {
     container.onclick = (e) => {
+      const cabecalho = e.target.closest('[data-sort]');
+      if (cabecalho) {
+        const col = cabecalho.dataset.sort;
+        if (ordenacao.coluna === col) ordenacao.dir = ordenacao.dir === 'asc' ? 'desc' : 'asc';
+        else ordenacao = { coluna: col, dir: ['valor', 'mesReferencia'].includes(col) ? 'desc' : 'asc' };
+        render(container);
+        return;
+      }
       const btn = e.target.closest('[data-action]');
       if (!btn) return;
       const { action, id } = btn.dataset;
