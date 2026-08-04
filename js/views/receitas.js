@@ -16,9 +16,19 @@ App.views.receitas = (function () {
   const state = App.state;
 
   let filtroAno = '';
+  let filtroMes = '';
   let ordenacao = { coluna: 'mesReferencia', dir: 'desc' };
 
   const CATEGORIAS_RECEITA = ['Salário', 'Faturamento', 'Empréstimo', 'Extra', 'Outros'];
+
+  // Meses (YYYY-MM) que têm receita lançada, do mais recente para o mais antigo.
+  // Inclui o mês atual mesmo sem lançamento, para dar de onde começar.
+  function mesesDisponiveis() {
+    const meses = new Set();
+    state.getData().receitas.forEach((r) => meses.add(r.mesReferencia));
+    meses.add(utils.currentMonthRef());
+    return Array.from(meses).filter(Boolean).sort().reverse();
+  }
 
   function th(coluna, rotulo) {
     const ativo = ordenacao.coluna === coluna;
@@ -48,7 +58,9 @@ App.views.receitas = (function () {
   function render(container) {
     const todas = state.getData().receitas.slice().sort((a, b) => (a.mesReferencia < b.mesReferencia ? 1 : -1));
     const anos = state.anosDisponiveis();
-    const listaFiltrada = filtroAno ? todas.filter((r) => utils.yearFromMonthRef(r.mesReferencia) === Number(filtroAno)) : todas;
+    const listaFiltrada = todas
+      .filter((r) => (filtroAno ? utils.yearFromMonthRef(r.mesReferencia) === Number(filtroAno) : true))
+      .filter((r) => (filtroMes ? r.mesReferencia === filtroMes : true));
     const lista = ordenar(listaFiltrada);
     const total = utils.sum(lista, (r) => r.valor);
 
@@ -62,6 +74,10 @@ App.views.receitas = (function () {
         <select class="input" data-field="ano">
           <option value="">Todos os anos</option>
           ${anos.map((a) => `<option value="${a}" ${String(a) === filtroAno ? 'selected' : ''}>${a}</option>`).join('')}
+        </select>
+        <select class="input" data-field="mes">
+          <option value="">Todos os meses</option>
+          ${mesesDisponiveis().map((m) => `<option value="${m}" ${filtroMes === m ? 'selected' : ''}>${utils.escapeHtml(utils.monthRefToLabel(m))}</option>`).join('')}
         </select>
       </div>
 
@@ -230,6 +246,9 @@ App.views.receitas = (function () {
     container.onchange = (e) => {
       if (e.target.dataset.field === 'ano') {
         filtroAno = e.target.value;
+        render(container);
+      } else if (e.target.dataset.field === 'mes') {
+        filtroMes = e.target.value;
         render(container);
       }
     };
