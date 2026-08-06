@@ -1322,22 +1322,37 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
   gap: 10px;
   width: 100%;
   padding: var(--space-3) var(--space-4);
-  border: none;
   border-bottom: 1px solid var(--border);
   background: var(--track-bg);
   color: var(--text-primary);
-  cursor: pointer;
   font-size: 14px;
-  text-align: left;
-  transition: background var(--transition);
 }
-.fatura__head:hover { background: var(--accent-wash); }
+/* Só a área de "abrir/fechar" é o botão; as ações (pagar) ficam de fora dele
+   para não aninhar botão dentro de botão. */
+.fatura__toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+.fatura__toggle:hover .fatura__nome { color: var(--accent); }
 .fatura__chevron { display: inline-flex; color: var(--text-secondary); transition: transform var(--transition); }
 .fatura__chevron .icon { width: 16px; height: 16px; vertical-align: 0; }
 .fatura__chevron.is-open { transform: rotate(90deg); }
 .fatura__nome { font-weight: 600; }
 .fatura__meta { color: var(--text-muted); font-size: 12px; }
-.fatura__total { margin-left: auto; font-weight: 600; }
+.fatura__total { font-weight: 600; }
+.fatura__acoes { display: inline-flex; gap: 4px; }
+/* Fatura paga: cabeçalho mais discreto. */
+.fatura--pago .fatura__head { opacity: 0.7; }
 .data-list__row--membro > span { background: rgba(128, 128, 128, 0.05); }
 .data-list__row--membro > .data-list__descricao { padding-left: calc(var(--space-4) + 18px); }
 

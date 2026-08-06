@@ -146,23 +146,103 @@ App.state = (function () {
   }
 
   // ---------------------------------------------------------------------
-  // Cartões de crédito (nomes) — usados p/ agrupar gastos em faturas
+  // Cartões de crédito — cada um com dia de fechamento e de vencimento, que
+  // definem em qual fatura cada compra cai. Os gastos referenciam o cartão
+  // pelo NOME (string em g.cartao).
   // ---------------------------------------------------------------------
 
   function listCartoes() {
-    return (data.cartoes || []).slice().sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    return (data.cartoes || []).slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   }
 
-  function addCartao(nome) {
+  function getCartao(nome) {
+    const alvo = (nome || '').trim().toLowerCase();
+    return (data.cartoes || []).find((c) => c.nome.toLowerCase() === alvo) || null;
+  }
+
+  // Cria (ou atualiza os dias de) um cartão. Devolve o objeto do cartão.
+  function addCartao(nome, diaFechamento, diaVencimento) {
     const limpo = (nome || '').trim();
     if (!limpo) return null;
     if (!data.cartoes) data.cartoes = [];
-    const existe = data.cartoes.find((c) => c.toLowerCase() === limpo.toLowerCase());
-    if (existe) return existe;
-    data.cartoes.push(limpo);
+    const F = diaFechamento != null && diaFechamento !== '' ? clampDia(diaFechamento) : null;
+    const V = diaVencimento != null && diaVencimento !== '' ? clampDia(diaVencimento) : null;
+    const existe = data.cartoes.find((c) => c.nome.toLowerCase() === limpo.toLowerCase());
+    if (existe) {
+      if (F != null) existe.diaFechamento = F;
+      if (V != null) existe.diaVencimento = V;
+      persist();
+      notify();
+      return existe;
+    }
+    const novo = { nome: limpo, diaFechamento: F, diaVencimento: V };
+    data.cartoes.push(novo);
     persist();
     notify();
-    return limpo;
+    return novo;
+  }
+
+  function clampDia(dia) {
+    return Math.min(31, Math.max(1, Math.round(Number(dia) || 1)));
+  }
+
+  // ---------------------------------------------------------------------
+  // Faturas de cartão — o "pago/pendente" mora aqui, não em cada compra.
+  // Chave = "<cartao>||<mesRef>", onde mesRef é o mês em que a fatura é paga.
+  // ---------------------------------------------------------------------
+
+  function faturaKey(cartao, mesRef) {
+    return `${cartao}||${mesRef}`;
+  }
+
+  function getFatura(cartao, mesRef) {
+    if (!data.faturas) data.faturas = {};
+    return data.faturas[faturaKey(cartao, mesRef)] || { pago: false, dataPagamento: '' };
+  }
+
+  function marcarFaturaPaga(cartao, mesRef, dataPagamento) {
+    if (!data.faturas) data.faturas = {};
+    data.faturas[faturaKey(cartao, mesRef)] = { pago: true, dataPagamento: dataPagamento || utils.todayISO() };
+    persist();
+    notify();
+  }
+
+  function marcarFaturaPendente(cartao, mesRef) {
+    if (!data.faturas) data.faturas = {};
+    delete data.faturas[faturaKey(cartao, mesRef)];
+    persist();
+    notify();
+  }
+
+  // Data de vencimento (ISO) da fatura, a partir do dia de vencimento do cartão.
+  function faturaVencimento(cartao, mesRef) {
+    const c = getCartao(cartao);
+    return c && c.diaVencimento ? utils.faturaVencimentoISO(mesRef, c.diaVencimento) : null;
+  }
+
+  // 'pago' | 'atrasado' | 'pendente' — atrasada só se já passou o vencimento.
+  function faturaStatusEfetivo(cartao, mesRef) {
+    if (getFatura(cartao, mesRef).pago) return 'pago';
+    const venc = faturaVencimento(cartao, mesRef);
+    if (venc && venc < utils.todayISO()) return 'atrasado';
+    return 'pendente';
+  }
+
+  // Em qual mês de fatura uma compra (data ISO) cai, para um dado cartão.
+  // Sem os dias configurados, usa o próprio mês da data como fallback.
+  function mesRefFaturaParaCompra(cartao, dataCompraISO) {
+    const c = getCartao(cartao);
+    if (c && c.diaFechamento && c.diaVencimento) {
+      const f = utils.calcularFatura(dataCompraISO, c.diaFechamento, c.diaVencimento);
+      if (f) return f.mesRef;
+    }
+    return utils.monthRefFromDate(dataCompraISO);
+  }
+
+  // Um gasto de cartão está "pago" se a fatura dele está paga.
+  function estaPago(gasto) {
+    if (gasto.cartao) return getFatura(gasto.cartao, gasto.mesReferencia).pago;
+    return gasto.status === 'pago';
   }
 
   // ---------------------------------------------------------------------
@@ -317,6 +397,8 @@ App.state = (function () {
   }
 
   function statusEfetivo(gasto) {
+    // Gasto de cartão herda o status da própria fatura.
+    if (gasto.cartao) return faturaStatusEfetivo(gasto.cartao, gasto.mesReferencia);
     if (gasto.status === 'pendente' && utils.isOverdue(gasto)) return 'atrasado';
     return gasto.status;
   }
@@ -414,8 +496,10 @@ App.state = (function () {
     const totalBruto = utils.sum(lista, (g) => g.valor);
     const totalDesconto = utils.sum(lista, (g) => g.desconto);
     const totalLiquido = totalBruto - totalDesconto;
-    const pagos = lista.filter((g) => g.status === 'pago');
-    const pendentes = lista.filter((g) => g.status === 'pendente');
+    // "Pago" considera a fatura para gastos de cartão; o resto não-pago
+    // (pendente ou atrasado) entra em pendente.
+    const pagos = lista.filter((g) => estaPago(g));
+    const pendentes = lista.filter((g) => !estaPago(g));
     const totalPago = utils.sum(pagos, valorLiquido);
     const totalPendente = utils.sum(pendentes, valorLiquido);
     return {
@@ -452,24 +536,57 @@ App.state = (function () {
     ];
   }
 
-  // Atrasados e próximos vencimentos olham TODOS os gastos pendentes,
-  // independente do mês de referência selecionado — são avisos sobre o que
-  // precisa de atenção agora, não um recorte do orçamento de um mês específico.
-  function gastosAtrasados() {
-    return data.gastos
-      .filter((g) => utils.isOverdue(g))
-      .sort((a, b) => (a.vencimento < b.vencimento ? -1 : 1));
+  // Agrupa os gastos de cartão em faturas (cartão + mês), com total, vencimento
+  // e status. É a base tanto da lista de Gastos quanto dos avisos do Painel.
+  function faturasAbertas() {
+    const grupos = new Map();
+    data.gastos.forEach((g) => {
+      if (!g.cartao) return;
+      const key = faturaKey(g.cartao, g.mesReferencia);
+      if (!grupos.has(key)) grupos.set(key, { chave: key, cartao: g.cartao, mesRef: g.mesReferencia, itens: [] });
+      grupos.get(key).itens.push(g);
+    });
+    return Array.from(grupos.values()).map((grp) => ({
+      chave: grp.chave,
+      cartao: grp.cartao,
+      mesRef: grp.mesRef,
+      itens: grp.itens,
+      total: utils.sum(grp.itens, valorLiquido),
+      vencimento: faturaVencimento(grp.cartao, grp.mesRef),
+      pago: getFatura(grp.cartao, grp.mesRef).pago,
+      status: faturaStatusEfetivo(grp.cartao, grp.mesRef),
+    }));
   }
 
-  function proximosVencimentos(dias) {
+  // Normaliza gasto avulso e fatura num "compromisso" (algo a pagar), para os
+  // avisos do Painel tratarem os dois de forma uniforme.
+  function compromissoDeGasto(g) {
+    return { tipo: 'gasto', id: g.id, titulo: g.descricao, sub: categoriaNome(g.categoriaId), valor: valorLiquido(g), vencimento: g.vencimento };
+  }
+  function compromissoDeFatura(f) {
+    return { tipo: 'fatura', cartao: f.cartao, mesRef: f.mesRef, titulo: `Fatura ${f.cartao}`, sub: `Cartão · ${utils.monthRefToShortLabel(f.mesRef)}`, valor: f.total, vencimento: f.vencimento };
+  }
+
+  // Atrasados e próximos vencimentos olham TODOS os compromissos pendentes,
+  // independente do mês selecionado — são avisos sobre o que precisa de atenção
+  // agora. Gastos de cartão entram como a FATURA (uma linha), não compra a compra.
+  function compromissosAtrasados() {
     const hoje = utils.todayISO();
-    return data.gastos
-      .filter((g) => g.status === 'pendente' && g.vencimento >= hoje)
-      .filter((g) => {
-        const restante = utils.daysUntil(g.vencimento);
-        return restante != null && restante <= dias;
-      })
-      .sort((a, b) => (a.vencimento < b.vencimento ? -1 : 1));
+    const avulsos = data.gastos.filter((g) => !g.cartao && utils.isOverdue(g)).map(compromissoDeGasto);
+    const faturas = faturasAbertas().filter((f) => !f.pago && f.vencimento && f.vencimento < hoje).map(compromissoDeFatura);
+    return avulsos.concat(faturas).sort((a, b) => (a.vencimento < b.vencimento ? -1 : 1));
+  }
+
+  function compromissosProximos(dias) {
+    const hoje = utils.todayISO();
+    const dentro = (venc) => {
+      if (!venc || venc < hoje) return false;
+      const r = utils.daysUntil(venc);
+      return r != null && r <= dias;
+    };
+    const avulsos = data.gastos.filter((g) => !g.cartao && g.status === 'pendente' && dentro(g.vencimento)).map(compromissoDeGasto);
+    const faturas = faturasAbertas().filter((f) => !f.pago && dentro(f.vencimento)).map(compromissoDeFatura);
+    return avulsos.concat(faturas).sort((a, b) => (a.vencimento < b.vencimento ? -1 : 1));
   }
 
   // Todos os meses que têm algum lançamento (receita ou gasto). Usado pelo
@@ -651,8 +768,8 @@ App.state = (function () {
       insights.push({ tom: 'good', texto: `Você está poupando ${utils.formatPercent(r.taxaPoupanca, 0)} da sua receita este mês. 👏` });
     }
     if (ehMesAtual) {
-      const proximos = proximosVencimentos(7);
-      const totalProximos = utils.sum(proximos, valorLiquido);
+      const proximos = compromissosProximos(7);
+      const totalProximos = utils.sum(proximos, (c) => c.valor);
       if (totalProximos > 0) {
         insights.push({ tom: 'info', texto: `Você tem ${utils.formatCurrency(totalProximos)} vencendo nos próximos 7 dias (${proximos.length} conta${proximos.length === 1 ? '' : 's'}).` });
       }
@@ -680,14 +797,17 @@ App.state = (function () {
   return {
     init, getData, getUI, setUI, subscribe, replaceData, resetAll, getTema, setTema,
     getMeiConfig, setMeiConfig, limiteMeiDoAno,
-    listCategorias, categoriaNome, addCategoria, listCartoes, addCartao,
+    listCategorias, categoriaNome, addCategoria,
+    listCartoes, getCartao, addCartao,
+    getFatura, marcarFaturaPaga, marcarFaturaPendente, faturaVencimento,
+    faturaStatusEfetivo, mesRefFaturaParaCompra, estaPago, faturasAbertas,
     addGasto, addGastosLote, updateGasto, deleteGasto, marcarGastoPago, marcarGastoPendente,
     addReceita, updateReceita, deleteReceita, receitaDoMes,
     addNotaFiscal, updateNotaFiscal, deleteNotaFiscal,
     getOrcamentos, setOrcamento, setOrcamentosEmLote, orcamentoStatusDoMes,
     getFiltros, setFiltro, limparFiltros, statusEfetivo, gastosFiltrados,
     valorLiquido, gastosDoMes, gastosDoAno, totais, gastosPorCategoria,
-    comparativoFixoVariavel, gastosAtrasados, proximosVencimentos,
+    comparativoFixoVariavel, compromissosAtrasados, compromissosProximos,
     resumoMensal, resumoAnual, variacaoMesAnterior, mediaDespesasMesesAnteriores, evolucaoMensal,
     topCategorias, notasFiscaisDoAno, anosDisponiveis, gerarInsights,
   };

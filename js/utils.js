@@ -117,6 +117,44 @@ App.utils = (function () {
     return gasto.status === 'pendente' && gasto.vencimento < ref;
   }
 
+  function ultimoDiaDoMes(y, mIndex0) {
+    return new Date(Date.UTC(y, mIndex0 + 1, 0)).getUTCDate();
+  }
+
+  // Dado o dia da compra e os dias de FECHAMENTO e VENCIMENTO do cartão,
+  // descobre em qual fatura a compra cai. Regra:
+  //  - Compra até o dia do fechamento entra na fatura que fecha neste mês;
+  //    depois do fechamento, entra na fatura do mês seguinte.
+  //  - A fatura vence no dia de vencimento; se o vencimento é ANTES do
+  //    fechamento (ex.: fecha dia 28, vence dia 7), o pagamento cai no mês
+  //    seguinte ao fechamento.
+  // O "mesRef" devolvido é o mês em que a fatura é PAGA (mês subsequente à
+  // compra, na prática) — é ele que agrupa a fatura e onde o gasto pesa no
+  // caixa. Devolve null se o cartão ainda não tem os dias configurados.
+  function calcularFatura(dataCompraISO, diaFechamento, diaVencimento) {
+    const F = Number(diaFechamento);
+    const V = Number(diaVencimento);
+    if (!dataCompraISO || !F || !V) return null;
+    const [y, m, d] = dataCompraISO.split('-').map(Number);
+    let fY = y; let fM = m; // mês (1-based) do fechamento que captura a compra
+    if (d > F) { fM += 1; if (fM > 12) { fM = 1; fY += 1; } }
+    let dY = fY; let dM = fM; // mês do vencimento
+    if (V < F) { dM += 1; if (dM > 12) { dM = 1; dY += 1; } }
+    const mesRef = `${dY}-${pad(dM)}`;
+    return { mesRef, vencimentoISO: faturaVencimentoISO(mesRef, V) };
+  }
+
+  // Data de vencimento (ISO) de uma fatura, dado o mês da fatura e o dia de
+  // vencimento do cartão. Ajusta para o último dia do mês quando o dia não
+  // existe (ex.: vencimento 31 em fevereiro).
+  function faturaVencimentoISO(mesRef, diaVencimento) {
+    const V = Number(diaVencimento);
+    if (!mesRef || !V) return null;
+    const [y, m] = mesRef.split('-').map(Number);
+    const dia = Math.min(V, ultimoDiaDoMes(y, m - 1));
+    return `${mesRef}-${pad(dia)}`;
+  }
+
   function daysUntil(isoDate, referenceISODate) {
     const ref = parseISODate(referenceISODate || todayISO());
     const target = parseISODate(isoDate);
@@ -140,6 +178,7 @@ App.utils = (function () {
     formatCurrency, formatPercent, formatDate, parseISODate, todayISO,
     currentMonthRef, currentYear, monthRefToLabel, monthRefToShortLabel,
     addMonths, monthRefFromDate, yearFromMonthRef, last12Months, uuid,
+    calcularFatura, faturaVencimentoISO,
     escapeHtml, isOverdue, daysUntil, sum, clamp, pad, capitalize, statusLabel,
     LIMITE_MEI_ANUAL,
   };

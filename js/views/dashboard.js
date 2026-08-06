@@ -128,8 +128,8 @@ App.views.dashboard = (function () {
     const gastosDoMes = state.gastosDoMes(mes);
     const porCategoria = App.charts.foldTop(state.gastosPorCategoria(gastosDoMes), 7);
     const fixoVariavel = state.comparativoFixoVariavel(gastosDoMes);
-    const atrasados = state.gastosAtrasados();
-    const proximos = state.proximosVencimentos(prazoProximos);
+    const atrasados = state.compromissosAtrasados();
+    const proximos = state.compromissosProximos(prazoProximos);
     const evolucao = state.evolucaoMensal(mes, 12);
 
     const saldoSentido = resumo.saldo >= 0 ? 'positivo' : 'negativo';
@@ -286,19 +286,28 @@ App.views.dashboard = (function () {
     wireEvents(container);
   }
 
+  // Botão "marcar pago" de um compromisso — para fatura, aciona a fatura
+  // inteira; para gasto avulso, o gasto.
+  function botaoPagar(c) {
+    if (c.tipo === 'fatura') {
+      return `<button type="button" class="button button--small button--icon" data-action="pagar-fatura" data-cartao="${utils.escapeHtml(c.cartao)}" data-mes="${c.mesRef}">${App.icons.get('check')} Pagar fatura</button>`;
+    }
+    return `<button type="button" class="button button--small button--icon" data-action="pagar" data-id="${c.id}">${App.icons.get('check')} Marcar pago</button>`;
+  }
+
   function renderAtrasados(lista) {
-    if (!lista.length) return '<p class="empty-hint">Nenhum gasto em atraso. 🎉</p>';
-    return `<ul class="attention-list">${lista.map((g) => {
-      const dias = Math.abs(utils.daysUntil(g.vencimento));
+    if (!lista.length) return '<p class="empty-hint">Nada em atraso. 🎉</p>';
+    return `<ul class="attention-list">${lista.map((c) => {
+      const dias = Math.abs(utils.daysUntil(c.vencimento));
       return `
         <li class="attention-list__item attention-list__item--critical">
           <div>
-            <div class="attention-list__title">${utils.escapeHtml(g.descricao)}</div>
-            <div class="attention-list__meta">${utils.escapeHtml(state.categoriaNome(g.categoriaId))} · venceu em ${utils.formatDate(g.vencimento)} (${dias}d)</div>
+            <div class="attention-list__title">${utils.escapeHtml(c.titulo)}</div>
+            <div class="attention-list__meta">${utils.escapeHtml(c.sub)} · venceu em ${utils.formatDate(c.vencimento)} (${dias}d)</div>
           </div>
           <div class="attention-list__actions">
-            <span class="attention-list__valor">${utils.formatCurrency(state.valorLiquido(g))}</span>
-            <button type="button" class="button button--small button--icon" data-action="pagar" data-id="${g.id}">${App.icons.get('check')} Marcar pago</button>
+            <span class="attention-list__valor">${utils.formatCurrency(c.valor)}</span>
+            ${botaoPagar(c)}
           </div>
         </li>`;
     }).join('')}</ul>`;
@@ -306,17 +315,17 @@ App.views.dashboard = (function () {
 
   function renderProximos(lista) {
     if (!lista.length) return '<p class="empty-hint">Nada vencendo nesse período.</p>';
-    return `<ul class="attention-list">${lista.map((g) => {
-      const dias = utils.daysUntil(g.vencimento);
+    return `<ul class="attention-list">${lista.map((c) => {
+      const dias = utils.daysUntil(c.vencimento);
       return `
         <li class="attention-list__item">
           <div>
-            <div class="attention-list__title">${utils.escapeHtml(g.descricao)}</div>
-            <div class="attention-list__meta">${utils.escapeHtml(state.categoriaNome(g.categoriaId))} · vence em ${utils.formatDate(g.vencimento)} (${dias === 0 ? 'hoje' : `em ${dias}d`})</div>
+            <div class="attention-list__title">${utils.escapeHtml(c.titulo)}</div>
+            <div class="attention-list__meta">${utils.escapeHtml(c.sub)} · vence em ${utils.formatDate(c.vencimento)} (${dias === 0 ? 'hoje' : `em ${dias}d`})</div>
           </div>
           <div class="attention-list__actions">
-            <span class="attention-list__valor">${utils.formatCurrency(state.valorLiquido(g))}</span>
-            <button type="button" class="button button--small button--icon" data-action="pagar" data-id="${g.id}">${App.icons.get('check')} Marcar pago</button>
+            <span class="attention-list__valor">${utils.formatCurrency(c.valor)}</span>
+            ${botaoPagar(c)}
           </div>
         </li>`;
     }).join('')}</ul>`;
@@ -333,6 +342,9 @@ App.views.dashboard = (function () {
       } else if (btn.dataset.action === 'pagar') {
         state.marcarGastoPago(btn.dataset.id);
         App.toast.show('Gasto marcado como pago.', 'sucesso');
+      } else if (btn.dataset.action === 'pagar-fatura') {
+        state.marcarFaturaPaga(btn.dataset.cartao, btn.dataset.mes);
+        App.toast.show('Fatura marcada como paga.', 'sucesso');
       } else if (btn.dataset.action === 'definir-orcamento') {
         abrirModalOrcamentos();
       } else if (btn.dataset.prazo) {

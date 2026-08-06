@@ -157,8 +157,18 @@ App.views.gastos = (function () {
   }
 
   // HTML de uma linha de gasto (usada solta ou como membro de uma fatura).
+  // Membro de fatura NÃO tem pago/pendente próprio — o status (e o "pagar")
+  // ficam na fatura. Aí a coluna de vencimento vira a DATA DA COMPRA.
   function linhaGastoHtml(g, membro) {
     const statusEfetivo = state.statusEfetivo(g);
+    const statusCol = membro
+      ? '<span class="data-list__obs">na fatura</span>'
+      : `<span class="pill pill--${statusEfetivo}">${utils.statusLabel(statusEfetivo)}</span>`;
+    const acoesStatus = membro
+      ? ''
+      : (g.status === 'pendente'
+        ? `<button type="button" class="icon-button" title="Marcar como pago" data-action="pagar" data-id="${g.id}">${App.icons.get('check')}</button>`
+        : `<button type="button" class="icon-button" title="Marcar como pendente" data-action="rependente" data-id="${g.id}">${App.icons.get('undo')}</button>`);
     return `
       <div class="data-list__row${membro ? ' data-list__row--membro' : ''}">
         <span class="data-list__descricao">
@@ -168,13 +178,11 @@ App.views.gastos = (function () {
         <span class="data-list__categoria"><span class="cat-icon">${App.icons.forCategoria(state.categoriaNome(g.categoriaId))}</span>${utils.escapeHtml(state.categoriaNome(g.categoriaId))}</span>
         <span>${g.tipo === 'fixo' ? 'Fixo' : 'Variável'}</span>
         <span class="valor-mono">${utils.formatCurrency(state.valorLiquido(g))}</span>
-        <span>${utils.formatDate(g.vencimento)}</span>
+        <span>${utils.formatDate(g.vencimento)}${membro ? '<span class="data-list__obs">compra</span>' : ''}</span>
         <span>${utils.escapeHtml(utils.monthRefToShortLabel(g.mesReferencia))}</span>
-        <span><span class="pill pill--${statusEfetivo}">${utils.statusLabel(statusEfetivo)}</span></span>
+        <span>${statusCol}</span>
         <span class="data-list__acoes">
-          ${g.status === 'pendente'
-            ? `<button type="button" class="icon-button" title="Marcar como pago" data-action="pagar" data-id="${g.id}">${App.icons.get('check')}</button>`
-            : `<button type="button" class="icon-button" title="Marcar como pendente" data-action="rependente" data-id="${g.id}">${App.icons.get('undo')}</button>`}
+          ${acoesStatus}
           <button type="button" class="icon-button" title="Editar" data-action="editar" data-id="${g.id}">${App.icons.get('pencil')}</button>
           <button type="button" class="icon-button" title="Excluir" data-action="excluir" data-id="${g.id}">${App.icons.get('trash')}</button>
         </span>
@@ -206,17 +214,28 @@ App.views.gastos = (function () {
       .sort((a, b) => (a.mes < b.mes ? 1 : -1))
       .map((grp) => {
         const total = utils.sum(grp.itens, state.valorLiquido);
-        const pendentes = grp.itens.filter((g) => g.status === 'pendente').length;
         const aberta = faturasExpandidas.has(grp.chave);
+        const status = state.faturaStatusEfetivo(grp.cartao, grp.mes);
+        const venc = state.faturaVencimento(grp.cartao, grp.mes);
+        const pago = status === 'pago';
+        const cartaoAttr = utils.escapeHtml(grp.cartao);
         return `
-          <div class="fatura">
-            <button type="button" class="fatura__head" data-action="toggle-fatura" data-key="${utils.escapeHtml(grp.chave)}">
-              <span class="fatura__chevron ${aberta ? 'is-open' : ''}">${App.icons.get('chevron-right')}</span>
-              <span class="cat-icon">${App.icons.get('cat-cartao')}</span>
-              <span class="fatura__nome">Fatura ${utils.escapeHtml(grp.cartao)} · ${utils.escapeHtml(utils.monthRefToShortLabel(grp.mes))}</span>
-              <span class="fatura__meta">${grp.itens.length} lanç.${pendentes ? ` · ${pendentes} pend.` : ''}</span>
+          <div class="fatura fatura--${status}">
+            <div class="fatura__head">
+              <button type="button" class="fatura__toggle" data-action="toggle-fatura" data-key="${utils.escapeHtml(grp.chave)}">
+                <span class="fatura__chevron ${aberta ? 'is-open' : ''}">${App.icons.get('chevron-right')}</span>
+                <span class="cat-icon">${App.icons.get('cat-cartao')}</span>
+                <span class="fatura__nome">Fatura ${cartaoAttr} · ${utils.escapeHtml(utils.monthRefToShortLabel(grp.mes))}</span>
+                <span class="fatura__meta">${grp.itens.length} lanç.${venc ? ` · vence ${utils.formatDate(venc)}` : ' · sem vencimento'}</span>
+              </button>
+              <span class="pill pill--${status}">${utils.statusLabel(status)}</span>
               <span class="fatura__total valor-mono">${utils.formatCurrency(total)}</span>
-            </button>
+              <span class="fatura__acoes">
+                ${pago
+                  ? `<button type="button" class="icon-button" title="Marcar fatura como pendente" data-action="rependente-fatura" data-cartao="${cartaoAttr}" data-mes="${grp.mes}">${App.icons.get('undo')}</button>`
+                  : `<button type="button" class="icon-button" title="Marcar fatura como paga" data-action="pagar-fatura" data-cartao="${cartaoAttr}" data-mes="${grp.mes}">${App.icons.get('check')}</button>`}
+              </span>
+            </div>
             ${aberta ? grp.itens.map((g) => linhaGastoHtml(g, true)).join('') : ''}
           </div>`;
       }).join('');
@@ -285,12 +304,21 @@ App.views.gastos = (function () {
           <label>Cartão de crédito (opcional)
             <select name="cartao">
               <option value="" ${!g.cartao ? 'selected' : ''}>Nenhum</option>
-              ${state.listCartoes().map((c) => `<option value="${utils.escapeHtml(c)}" ${g.cartao === c ? 'selected' : ''}>${utils.escapeHtml(c)}</option>`).join('')}
+              ${state.listCartoes().map((c) => `<option value="${utils.escapeHtml(c.nome)}" ${g.cartao === c.nome ? 'selected' : ''}>${utils.escapeHtml(c.nome)}</option>`).join('')}
               <option value="${NOVO_CARTAO_VALOR}">+ Novo cartão…</option>
             </select>
           </label>
           <label class="is-hidden" data-field-wrap="novoCartao">Nome do novo cartão
             <input type="text" name="novoCartao" placeholder="Ex.: PicPay" />
+          </label>
+        </div>
+
+        <div class="form__row form__row--2 is-hidden" data-field-wrap="novoCartaoDatas">
+          <label>Dia de fechamento
+            <input type="number" name="novoCartaoFechamento" min="1" max="31" placeholder="Ex.: 3" />
+          </label>
+          <label>Dia de vencimento
+            <input type="number" name="novoCartaoVencimento" min="1" max="31" placeholder="Ex.: 10" />
           </label>
         </div>
 
@@ -304,15 +332,17 @@ App.views.gastos = (function () {
         </div>
 
         <div class="form__row form__row--2">
-          <label>Vencimento
+          <label><span data-role="vencimento-label">Vencimento</span>
             <input type="date" name="vencimento" required value="${g.vencimento}" />
           </label>
-          <label>Mês de referência
+          <label data-field-wrap="mesReferencia">Mês de referência
             <input type="month" name="mesReferencia" required value="${g.mesReferencia}" />
           </label>
         </div>
 
-        <div class="form__row form__row--2">
+        <p class="form__hint is-hidden" data-role="fatura-nota"></p>
+
+        <div class="form__row form__row--2" data-field-wrap="statusRow">
           <label>Status
             <select name="status">
               <option value="pendente" ${g.status === 'pendente' ? 'selected' : ''}>Pendente</option>
@@ -369,11 +399,54 @@ App.views.gastos = (function () {
           dataPagamentoWrap.classList.toggle('is-hidden', statusSelect.value !== 'pago');
         });
 
+        // Cartão: ao escolher um cartão (ou "+ novo cartão"), o gasto vira uma
+        // compra de fatura — some o status por compra e o mês de referência
+        // (calculado pela data da compra + dias do cartão), e o campo de
+        // "Vencimento" passa a significar "Data da compra".
         const cartaoSelect = form.elements.cartao;
         const novoCartaoWrap = dialog.querySelector('[data-field-wrap="novoCartao"]');
-        cartaoSelect.addEventListener('change', () => {
-          novoCartaoWrap.classList.toggle('is-hidden', cartaoSelect.value !== NOVO_CARTAO_VALOR);
+        const novoCartaoDatasWrap = dialog.querySelector('[data-field-wrap="novoCartaoDatas"]');
+        const statusRow = dialog.querySelector('[data-field-wrap="statusRow"]');
+        const mesRefWrap = dialog.querySelector('[data-field-wrap="mesReferencia"]');
+        const vencimentoLabel = dialog.querySelector('[data-role="vencimento-label"]');
+        const faturaNota = dialog.querySelector('[data-role="fatura-nota"]');
+        const vencimentoInput = form.elements.vencimento;
+
+        function atualizarNotaFatura() {
+          const cartaoVal = cartaoSelect.value;
+          const dataCompra = vencimentoInput.value;
+          let mesRef = null;
+          if (cartaoVal === NOVO_CARTAO_VALOR) {
+            const F = form.elements.novoCartaoFechamento.value;
+            const V = form.elements.novoCartaoVencimento.value;
+            const f = utils.calcularFatura(dataCompra, F, V);
+            mesRef = f ? f.mesRef : null;
+          } else if (cartaoVal) {
+            mesRef = state.mesRefFaturaParaCompra(cartaoVal, dataCompra);
+          }
+          if (!cartaoVal) { faturaNota.classList.add('is-hidden'); return; }
+          faturaNota.classList.remove('is-hidden');
+          faturaNota.textContent = mesRef
+            ? `Esta compra entra na fatura de ${utils.monthRefToLabel(mesRef)}.`
+            : 'Informe os dias de fechamento e vencimento do cartão para calcular a fatura.';
+        }
+
+        function atualizarModoCartao() {
+          const ehCartao = !!cartaoSelect.value; // cartão escolhido ou "+ novo"
+          const ehNovo = cartaoSelect.value === NOVO_CARTAO_VALOR;
+          novoCartaoWrap.classList.toggle('is-hidden', !ehNovo);
+          novoCartaoDatasWrap.classList.toggle('is-hidden', !ehNovo);
+          statusRow.classList.toggle('is-hidden', ehCartao);
+          mesRefWrap.classList.toggle('is-hidden', ehCartao);
+          vencimentoLabel.textContent = ehCartao ? 'Data da compra' : 'Vencimento';
+          atualizarNotaFatura();
+        }
+        cartaoSelect.addEventListener('change', atualizarModoCartao);
+        vencimentoInput.addEventListener('change', atualizarNotaFatura);
+        ['novoCartaoFechamento', 'novoCartaoVencimento'].forEach((n) => {
+          form.elements[n].addEventListener('input', atualizarNotaFatura);
         });
+        atualizarModoCartao();
 
         // Autocomplete: ao digitar/escolher uma descrição já usada, pré-preenche
         // categoria e tipo com base no último lançamento igual (só ao CRIAR, e
@@ -424,22 +497,42 @@ App.views.gastos = (function () {
           if (cartao === NOVO_CARTAO_VALOR) {
             const nomeCartao = String(fd.get('novoCartao') || '').trim();
             if (!nomeCartao) { form.elements.novoCartao.focus(); return; }
-            cartao = state.addCartao(nomeCartao);
+            const obj = state.addCartao(nomeCartao, fd.get('novoCartaoFechamento'), fd.get('novoCartaoVencimento'));
+            cartao = obj.nome;
           }
           const status = fd.get('status');
-          const payload = {
-            descricao: String(fd.get('descricao') || '').trim(),
-            categoriaId,
-            tipo: fd.get('tipo'),
-            valor: Number(fd.get('valor')) || 0,
-            desconto: Number(fd.get('desconto')) || 0,
-            vencimento: fd.get('vencimento'),
-            mesReferencia: fd.get('mesReferencia'),
-            status,
-            dataPagamento: status === 'pago' ? (fd.get('dataPagamento') || utils.todayISO()) : '',
-            observacao: String(fd.get('observacao') || '').trim(),
-            cartao,
-          };
+          // Data que o usuário informou: p/ gasto avulso é o vencimento; p/
+          // compra de cartão é a DATA DA COMPRA (o mesmo campo de input).
+          const dataInformada = fd.get('vencimento');
+          // Compra de cartão não tem pago/pendente próprio; o mês de referência
+          // é o da FATURA, calculado pela data da compra + dias do cartão.
+          const payload = cartao
+            ? {
+              descricao: String(fd.get('descricao') || '').trim(),
+              categoriaId,
+              tipo: fd.get('tipo'),
+              valor: Number(fd.get('valor')) || 0,
+              desconto: Number(fd.get('desconto')) || 0,
+              vencimento: dataInformada,
+              mesReferencia: state.mesRefFaturaParaCompra(cartao, dataInformada),
+              status: 'pendente',
+              dataPagamento: '',
+              observacao: String(fd.get('observacao') || '').trim(),
+              cartao,
+            }
+            : {
+              descricao: String(fd.get('descricao') || '').trim(),
+              categoriaId,
+              tipo: fd.get('tipo'),
+              valor: Number(fd.get('valor')) || 0,
+              desconto: Number(fd.get('desconto')) || 0,
+              vencimento: dataInformada,
+              mesReferencia: fd.get('mesReferencia'),
+              status,
+              dataPagamento: status === 'pago' ? (fd.get('dataPagamento') || utils.todayISO()) : '',
+              observacao: String(fd.get('observacao') || '').trim(),
+              cartao: '',
+            };
           if (gastoExistente) {
             state.updateGasto(gastoExistente.id, payload);
             App.toast.show('Gasto atualizado.', 'sucesso');
@@ -498,6 +591,8 @@ App.views.gastos = (function () {
       else if (action === 'editar') abrirModalGasto(state.getData().gastos.find((g) => g.id === id));
       else if (action === 'pagar') { state.marcarGastoPago(id); App.toast.show('Gasto marcado como pago.', 'sucesso'); }
       else if (action === 'rependente') state.marcarGastoPendente(id);
+      else if (action === 'pagar-fatura') { state.marcarFaturaPaga(btn.dataset.cartao, btn.dataset.mes); App.toast.show('Fatura marcada como paga.', 'sucesso'); }
+      else if (action === 'rependente-fatura') state.marcarFaturaPendente(btn.dataset.cartao, btn.dataset.mes);
       else if (action === 'excluir') {
         if (window.confirm('Excluir este gasto? Essa ação não pode ser desfeita.')) {
           state.deleteGasto(id);
