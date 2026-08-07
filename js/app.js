@@ -54,6 +54,7 @@
           </button>
           <button type="button" class="button button--ghost button--full button--icon" data-action="exportar">${App.icons.get('download')} Exportar backup</button>
           <button type="button" class="button button--ghost button--full button--icon" data-action="importar">${App.icons.get('upload')} Importar backup</button>
+          <button type="button" class="button button--ghost button--full button--icon" data-action="gdrive">${App.icons.get('cloud')} <span data-role="gdrive-label">Google Drive</span></button>
           <button type="button" class="button button--ghost button--full button--icon button--danger" data-action="zerar">${App.icons.get('trash')} Zerar dados</button>
         </div>
       </aside>
@@ -133,6 +134,9 @@
           App.toast.show('Dados zerados.', 'info');
         }
         return true;
+      case 'gdrive':
+        abrirGoogleDrive();
+        return false;
       case 'ajustes':
         abrirAjustes();
         return false;
@@ -153,6 +157,7 @@
         </button>
         <button type="button" class="button button--ghost button--full button--icon" data-acao="exportar">${App.icons.get('download')} Exportar backup</button>
         <button type="button" class="button button--ghost button--full button--icon" data-acao="importar">${App.icons.get('upload')} Importar backup</button>
+        <button type="button" class="button button--ghost button--full button--icon" data-acao="gdrive">${App.icons.get('cloud')} Google Drive</button>
         <button type="button" class="button button--ghost button--full button--icon button--danger" data-acao="zerar">${App.icons.get('trash')} Zerar dados</button>
       </div>`;
     App.modal.open({
@@ -170,6 +175,125 @@
             dialog.querySelector('[data-role="ajustes-tema-label"]').textContent = `Tema: ${TEMA_LABEL[novo]}`;
           } else if (fecha) {
             App.modal.close();
+          }
+        });
+      },
+    });
+  }
+
+  // Modal de sincronização com o Google Drive. Deixa o usuário colar o Client
+  // ID (uma vez), conectar/desconectar e enviar/baixar o backup do Drive.
+  function abrirGoogleDrive() {
+    const gdrive = App.gdrive;
+    const origem = window.location.origin;
+
+    function statusHtml() {
+      const conectado = gdrive.isConnected();
+      const ultimo = gdrive.getLastSync();
+      const quando = ultimo ? new Date(ultimo).toLocaleString('pt-BR') : null;
+      return `
+        <p class="gdrive-status">
+          <span class="pill pill--${conectado ? 'pago' : 'pendente'}">${conectado ? 'Conectado' : 'Desconectado'}</span>
+          ${quando ? `<span class="data-list__obs">Última sincronização: ${utils.escapeHtml(quando)}</span>` : ''}
+        </p>`;
+    }
+
+    const bodyHtml = `
+      <div class="gdrive">
+        <p class="form__hint">
+          Guarda uma cópia do seu backup numa pasta privada do app no seu Google Drive.
+          Os dados vão direto do navegador para o seu Drive — nenhum servidor no meio.
+        </p>
+
+        <label>Client ID do Google
+          <input type="text" name="gdriveClientId" placeholder="xxxxxxxx.apps.googleusercontent.com"
+                 value="${utils.escapeHtml(gdrive.getClientId())}" autocomplete="off" spellcheck="false" />
+        </label>
+        <div class="form__actions form__actions--start">
+          <button type="button" class="button button--ghost" data-g="salvar-id">Salvar Client ID</button>
+        </div>
+
+        <details class="gdrive-help">
+          <summary>Como obter o Client ID (uma vez só)</summary>
+          <ol>
+            <li>Acesse <strong>console.cloud.google.com</strong> e crie um projeto (ou use um existente).</li>
+            <li>Em <strong>APIs e serviços → Biblioteca</strong>, ative a <strong>Google Drive API</strong>.</li>
+            <li>Em <strong>Tela de consentimento OAuth</strong>, configure como "Externo" e adicione seu e-mail em usuários de teste.</li>
+            <li>Em <strong>Credenciais → Criar credenciais → ID do cliente OAuth</strong>, tipo <strong>Aplicativo da Web</strong>.</li>
+            <li>Em <strong>Origens JavaScript autorizadas</strong>, adicione: <code>${utils.escapeHtml(origem)}</code></li>
+            <li>Copie o <strong>Client ID</strong> gerado e cole no campo acima.</li>
+          </ol>
+        </details>
+
+        <div data-role="gdrive-status">${statusHtml()}</div>
+
+        <div class="form__actions form__actions--stack">
+          <button type="button" class="button button--primary button--full button--icon" data-g="conectar">${App.icons.get('cloud')} <span data-role="conectar-label">Conectar com Google</span></button>
+          <button type="button" class="button button--ghost button--full button--icon" data-g="enviar">${App.icons.get('upload')} Enviar backup para o Drive</button>
+          <button type="button" class="button button--ghost button--full button--icon" data-g="baixar">${App.icons.get('download')} Baixar backup do Drive</button>
+          <button type="button" class="button button--ghost button--full button--icon" data-g="desconectar">${App.icons.get('x')} Desconectar</button>
+        </div>
+      </div>`;
+
+    App.modal.open({
+      title: 'Sincronizar com Google Drive',
+      bodyHtml,
+      onMount(dialog) {
+        const statusWrap = dialog.querySelector('[data-role="gdrive-status"]');
+        const conectarLabel = dialog.querySelector('[data-role="conectar-label"]');
+        const idInput = dialog.querySelector('[name="gdriveClientId"]');
+
+        function refresh() {
+          statusWrap.innerHTML = statusHtml();
+          conectarLabel.textContent = gdrive.isConnected() ? 'Reconectar' : 'Conectar com Google';
+        }
+
+        dialog.addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-g]');
+          if (!btn) return;
+          const acao = btn.dataset.g;
+
+          if (acao === 'salvar-id') {
+            gdrive.setClientId(idInput.value);
+            App.toast.show('Client ID salvo.', 'sucesso');
+            refresh();
+            return;
+          }
+          if (acao === 'conectar') {
+            if (!gdrive.getClientId()) { App.toast.show('Cole e salve o Client ID primeiro.', 'erro'); return; }
+            btn.disabled = true;
+            gdrive.connect()
+              .then(() => { App.toast.show('Conectado ao Google Drive.', 'sucesso'); refresh(); })
+              .catch((err) => App.toast.show(err.message || 'Não foi possível conectar.', 'erro'))
+              .finally(() => { btn.disabled = false; });
+            return;
+          }
+          if (acao === 'desconectar') {
+            gdrive.disconnect();
+            App.toast.show('Desconectado.', 'info');
+            refresh();
+            return;
+          }
+          if (acao === 'enviar') {
+            btn.disabled = true;
+            gdrive.upload(state.getData())
+              .then(() => { App.toast.show('Backup enviado para o Drive.', 'sucesso'); refresh(); })
+              .catch((err) => App.toast.show(err.message || 'Falha ao enviar.', 'erro'))
+              .finally(() => { btn.disabled = false; });
+            return;
+          }
+          if (acao === 'baixar') {
+            if (!window.confirm('Isso substitui os dados deste navegador pelos do Drive. Continuar?')) return;
+            btn.disabled = true;
+            gdrive.download()
+              .then((remoto) => {
+                if (!remoto) { App.toast.show('Nenhum backup encontrado no Drive ainda.', 'info'); return; }
+                state.replaceData(App.storage.normalize(remoto));
+                App.toast.show('Backup baixado do Drive.', 'sucesso');
+                refresh();
+              })
+              .catch((err) => App.toast.show(err.message || 'Falha ao baixar.', 'erro'))
+              .finally(() => { btn.disabled = false; });
           }
         });
       },
@@ -194,11 +318,30 @@
     });
   }
 
+  // Auto-sync: quando conectado ao Drive, envia o backup pouco depois de cada
+  // mudança nos dados. Compara o JSON serializado pra não subir à toa (troca de
+  // tela/filtro não altera os dados). Debounce evita um upload por tecla.
+  function wireAutoSync() {
+    let ultimoEnviado = JSON.stringify(state.getData());
+    let timer = null;
+    state.subscribe(() => {
+      if (!App.gdrive || !App.gdrive.isConnected()) return;
+      const atual = JSON.stringify(state.getData());
+      if (atual === ultimoEnviado) return;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        ultimoEnviado = atual;
+        App.gdrive.upload(state.getData()).catch(() => { /* silencioso; usuário pode enviar manualmente */ });
+      }, 2000);
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     state.init();
     renderShell();
     wireShellEvents();
     state.subscribe(render);
+    wireAutoSync();
     render();
   });
 })();

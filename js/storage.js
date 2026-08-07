@@ -183,5 +183,5 @@ App.storage = (function () {
     });
   }
 
-  return { load, save, resetAll, exportToFile, importFromFile, CATEGORIAS_PADRAO };
+  return { load, save, resetAll, exportToFile, importFromFile, normalize: normalizar, CATEGORIAS_PADRAO };
 })();
