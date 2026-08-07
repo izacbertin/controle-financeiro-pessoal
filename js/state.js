@@ -229,14 +229,16 @@ App.state = (function () {
   }
 
   // Em qual mês de fatura uma compra (data ISO) cai, para um dado cartão.
-  // Sem os dias configurados, usa o próprio mês da data como fallback.
+  // Sem os dias configurados, cai no MÊS SEGUINTE à compra — uma compra no
+  // cartão praticamente nunca é paga na fatura do próprio mês (a do mês já
+  // costuma estar fechada). É só uma sugestão; o usuário pode trocar o mês.
   function mesRefFaturaParaCompra(cartao, dataCompraISO) {
     const c = getCartao(cartao);
     if (c && c.diaFechamento && c.diaVencimento) {
       const f = utils.calcularFatura(dataCompraISO, c.diaFechamento, c.diaVencimento);
       if (f) return f.mesRef;
     }
-    return utils.monthRefFromDate(dataCompraISO);
+    return utils.addMonths(utils.monthRefFromDate(dataCompraISO), 1);
   }
 
   // Um gasto de cartão está "pago" se a fatura dele está paga.

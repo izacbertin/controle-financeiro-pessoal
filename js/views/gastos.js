@@ -335,7 +335,7 @@ App.views.gastos = (function () {
           <label><span data-role="vencimento-label">Vencimento</span>
             <input type="date" name="vencimento" required value="${g.vencimento}" />
           </label>
-          <label data-field-wrap="mesReferencia">Mês de referência
+          <label data-field-wrap="mesReferencia"><span data-role="mesref-label">Mês de referência</span>
             <input type="month" name="mesReferencia" required value="${g.mesReferencia}" />
           </label>
         </div>
@@ -407,46 +407,67 @@ App.views.gastos = (function () {
         const novoCartaoWrap = dialog.querySelector('[data-field-wrap="novoCartao"]');
         const novoCartaoDatasWrap = dialog.querySelector('[data-field-wrap="novoCartaoDatas"]');
         const statusRow = dialog.querySelector('[data-field-wrap="statusRow"]');
-        const mesRefWrap = dialog.querySelector('[data-field-wrap="mesReferencia"]');
+        const mesRefLabel = dialog.querySelector('[data-role="mesref-label"]');
+        const mesRefInput = form.elements.mesReferencia;
         const vencimentoLabel = dialog.querySelector('[data-role="vencimento-label"]');
         const faturaNota = dialog.querySelector('[data-role="fatura-nota"]');
         const vencimentoInput = form.elements.vencimento;
 
-        function atualizarNotaFatura() {
+        // O campo de fatura (mês de referência) é sugerido automaticamente a
+        // partir da data da compra + dias do cartão, mas o usuário pode trocar.
+        // Uma vez editado à mão, paramos de sobrescrever a escolha dele.
+        let mesRefManual = false;
+        mesRefInput.addEventListener('input', () => { mesRefManual = true; });
+
+        // Calcula a fatura sugerida para a compra atual (ou null se não der).
+        function faturaSugerida() {
           const cartaoVal = cartaoSelect.value;
           const dataCompra = vencimentoInput.value;
-          let mesRef = null;
           if (cartaoVal === NOVO_CARTAO_VALOR) {
             const F = form.elements.novoCartaoFechamento.value;
             const V = form.elements.novoCartaoVencimento.value;
             const f = utils.calcularFatura(dataCompra, F, V);
-            mesRef = f ? f.mesRef : null;
-          } else if (cartaoVal) {
-            mesRef = state.mesRefFaturaParaCompra(cartaoVal, dataCompra);
+            if (f) return f.mesRef;
+            return dataCompra ? utils.addMonths(utils.monthRefFromDate(dataCompra), 1) : null;
           }
-          if (!cartaoVal) { faturaNota.classList.add('is-hidden'); return; }
-          faturaNota.classList.remove('is-hidden');
-          faturaNota.textContent = mesRef
-            ? `Esta compra entra na fatura de ${utils.monthRefToLabel(mesRef)}.`
-            : 'Informe os dias de fechamento e vencimento do cartão para calcular a fatura.';
+          if (cartaoVal) return state.mesRefFaturaParaCompra(cartaoVal, dataCompra);
+          return null;
         }
 
-        function atualizarModoCartao() {
+        // Atualiza a sugestão de fatura e a nota explicativa. `preencher` diz se
+        // devemos jogar a sugestão no campo (só em mudanças do usuário, nunca na
+        // montagem inicial — para não apagar o valor de um gasto em edição).
+        function atualizarNotaFatura(preencher) {
+          const cartaoVal = cartaoSelect.value;
+          if (!cartaoVal) { faturaNota.classList.add('is-hidden'); return; }
+          const mesRef = faturaSugerida();
+          if (preencher && mesRef && !mesRefManual) mesRefInput.value = mesRef;
+          const cartaoObj = cartaoVal === NOVO_CARTAO_VALOR ? null : state.getCartao(cartaoVal);
+          const temDias = cartaoVal === NOVO_CARTAO_VALOR
+            ? !!(form.elements.novoCartaoFechamento.value && form.elements.novoCartaoVencimento.value)
+            : !!(cartaoObj && cartaoObj.diaFechamento && cartaoObj.diaVencimento);
+          faturaNota.classList.remove('is-hidden');
+          faturaNota.textContent = temDias
+            ? `Sugestão pelo fechamento do cartão: fatura de ${utils.monthRefToLabel(mesRefInput.value || mesRef)}. Você pode trocar acima.`
+            : 'Cartão sem dias de fechamento cadastrados — confira o mês da fatura acima (sugerido: mês seguinte à compra).';
+        }
+
+        function atualizarModoCartao(preencher) {
           const ehCartao = !!cartaoSelect.value; // cartão escolhido ou "+ novo"
           const ehNovo = cartaoSelect.value === NOVO_CARTAO_VALOR;
           novoCartaoWrap.classList.toggle('is-hidden', !ehNovo);
           novoCartaoDatasWrap.classList.toggle('is-hidden', !ehNovo);
           statusRow.classList.toggle('is-hidden', ehCartao);
-          mesRefWrap.classList.toggle('is-hidden', ehCartao);
+          mesRefLabel.textContent = ehCartao ? 'Fatura (mês de referência)' : 'Mês de referência';
           vencimentoLabel.textContent = ehCartao ? 'Data da compra' : 'Vencimento';
-          atualizarNotaFatura();
+          atualizarNotaFatura(preencher);
         }
-        cartaoSelect.addEventListener('change', atualizarModoCartao);
-        vencimentoInput.addEventListener('change', atualizarNotaFatura);
+        cartaoSelect.addEventListener('change', () => atualizarModoCartao(true));
+        vencimentoInput.addEventListener('change', () => atualizarNotaFatura(true));
         ['novoCartaoFechamento', 'novoCartaoVencimento'].forEach((n) => {
-          form.elements[n].addEventListener('input', atualizarNotaFatura);
+          form.elements[n].addEventListener('input', () => atualizarNotaFatura(true));
         });
-        atualizarModoCartao();
+        atualizarModoCartao(false);
 
         // Autocomplete: ao digitar/escolher uma descrição já usada, pré-preenche
         // categoria e tipo com base no último lançamento igual (só ao CRIAR, e
@@ -505,7 +526,8 @@ App.views.gastos = (function () {
           // compra de cartão é a DATA DA COMPRA (o mesmo campo de input).
           const dataInformada = fd.get('vencimento');
           // Compra de cartão não tem pago/pendente próprio; o mês de referência
-          // é o da FATURA, calculado pela data da compra + dias do cartão.
+          // é o da FATURA. Vem do campo (sugerido pela data da compra + dias do
+          // cartão, mas editável), com fallback pro cálculo automático.
           const payload = cartao
             ? {
               descricao: String(fd.get('descricao') || '').trim(),
@@ -514,7 +536,7 @@ App.views.gastos = (function () {
               valor: Number(fd.get('valor')) || 0,
               desconto: Number(fd.get('desconto')) || 0,
               vencimento: dataInformada,
-              mesReferencia: state.mesRefFaturaParaCompra(cartao, dataInformada),
+              mesReferencia: fd.get('mesReferencia') || state.mesRefFaturaParaCompra(cartao, dataInformada),
               status: 'pendente',
               dataPagamento: '',
               observacao: String(fd.get('observacao') || '').trim(),
