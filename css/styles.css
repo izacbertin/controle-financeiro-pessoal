@@ -1466,6 +1466,27 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 .btn-google__g { display: inline-flex; width: 18px; height: 18px; }
 .btn-google__g svg { display: block; width: 18px; height: 18px; }
 
+/* Tela de login (porta de entrada) */
+.login-gate {
+  position: fixed; inset: 0; z-index: 2000;
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--space-4); background: var(--page-bg);
+}
+.login-card {
+  width: 100%; max-width: 380px;
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius-lg, 16px); padding: 32px 28px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.15);
+  display: flex; flex-direction: column; gap: 18px; text-align: center;
+}
+.login-card__brand { font-size: 22px; font-weight: 800; color: var(--text-primary); }
+.login-card__hint { font-size: 14px; color: var(--text-secondary); line-height: 1.5; margin: 0; }
+.login-card__local {
+  background: none; border: none; color: var(--text-muted);
+  font-size: 13px; cursor: pointer; text-decoration: underline; padding: 4px;
+}
+.login-card__local:hover { color: var(--text-secondary); }
+
 /* Insights do Painel */
 .insights { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .insight { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.4; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--track-bg); }

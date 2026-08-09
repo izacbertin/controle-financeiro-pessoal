@@ -271,15 +271,23 @@
             if (!gdrive.getClientId()) { App.toast.show('Cole e salve o Client ID primeiro.', 'erro'); return; }
             btn.disabled = true;
             gdrive.connect()
-              .then(() => { App.toast.show('Conectado ao Google Drive.', 'sucesso'); refresh(); })
+              .then(() => {
+                localStorage.setItem(GDRIVE_AUTO_KEY, '1');
+                localStorage.removeItem(MODO_LOCAL_KEY);
+                App.toast.show('Conectado ao Google Drive.', 'sucesso');
+                refresh();
+              })
               .catch((err) => App.toast.show(err.message || 'Não foi possível conectar.', 'erro'))
               .finally(() => { btn.disabled = false; });
             return;
           }
           if (acao === 'desconectar') {
             gdrive.disconnect();
-            App.toast.show('Desconectado.', 'info');
+            localStorage.removeItem(GDRIVE_AUTO_KEY);
+            App.toast.show('Você saiu da conta Google.', 'info');
             refresh();
+            App.modal.close();
+            mostrarLogin();
             return;
           }
           if (acao === 'enviar') {
@@ -306,6 +314,100 @@
         });
       },
     });
+  }
+
+  // -----------------------------------------------------------------------
+  // Tela de login (porta de entrada com Google)
+  // -----------------------------------------------------------------------
+  const MODO_LOCAL_KEY = 'controleFinanceiroPessoal:modoLocal';
+  const GDRIVE_AUTO_KEY = 'controleFinanceiroPessoal:gdriveAuto';
+
+  function dadosVazios(d) {
+    return !((d.gastos || []).length || (d.receitas || []).length || (d.notasFiscais || []).length);
+  }
+
+  // Sincronização do primeiro login: decide entre baixar do Drive ou semear o
+  // Drive com o que já existe no aparelho — sem nunca apagar dados sem confirmar.
+  function primeiroSync() {
+    return App.gdrive.download().then((remoto) => {
+      const local = state.getData();
+      if (remoto && !dadosVazios(remoto)) {
+        if (dadosVazios(local) || window.confirm('Encontrei dados no seu Drive. Baixar e substituir o que está neste aparelho?')) {
+          state.replaceData(App.storage.normalize(remoto));
+          App.toast.show('Dados carregados do Drive.', 'sucesso');
+        } else {
+          return App.gdrive.upload(state.getData());
+        }
+      } else {
+        // Drive vazio: sobe o que tem no aparelho (cria o arquivo lá).
+        return App.gdrive.upload(state.getData()).then(() => {
+          App.toast.show('Conta conectada. Seus dados serão salvos no Drive.', 'sucesso');
+        });
+      }
+    });
+  }
+
+  function esconderLogin() {
+    const el = document.getElementById('login-gate');
+    if (el) el.remove();
+  }
+
+  function mostrarLogin() {
+    esconderLogin();
+    const el = document.createElement('div');
+    el.id = 'login-gate';
+    el.className = 'login-gate';
+    el.innerHTML = `
+      <div class="login-card">
+        <div class="login-card__brand">Controle Financeiro</div>
+        <p class="login-card__hint">Entre com sua conta Google para acessar e sincronizar seus gastos em qualquer aparelho.</p>
+        <button type="button" class="btn-google btn-google--full" data-login="google">
+          <span class="btn-google__g">${GOOGLE_G_SVG}</span>
+          <span data-role="login-google-label">Entrar com Google</span>
+        </button>
+        <button type="button" class="login-card__local" data-login="local">Usar só neste aparelho</button>
+      </div>`;
+    document.body.appendChild(el);
+
+    el.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-login]');
+      if (!btn) return;
+      if (btn.dataset.login === 'local') {
+        localStorage.setItem(MODO_LOCAL_KEY, '1');
+        esconderLogin();
+        return;
+      }
+      if (btn.dataset.login === 'google') {
+        const label = el.querySelector('[data-role="login-google-label"]');
+        btn.disabled = true;
+        if (label) label.textContent = 'Conectando…';
+        App.gdrive.connect()
+          .then(() => {
+            localStorage.setItem(GDRIVE_AUTO_KEY, '1');
+            localStorage.removeItem(MODO_LOCAL_KEY);
+            return primeiroSync();
+          })
+          .then(() => { esconderLogin(); })
+          .catch((err) => {
+            App.toast.show(err.message || 'Não foi possível entrar.', 'erro');
+            btn.disabled = false;
+            if (label) label.textContent = 'Entrar com Google';
+          });
+      }
+    });
+  }
+
+  // Decide, ao abrir o app, se mostra a tela de login ou entra direto:
+  //  - modo local escolhido antes -> entra direto (offline-first, como antes);
+  //  - já logou antes -> tenta reconectar em silêncio (sem popup);
+  //  - caso contrário -> mostra a tela de login.
+  function iniciarLogin() {
+    if (localStorage.getItem(MODO_LOCAL_KEY) === '1') return;
+    if (localStorage.getItem(GDRIVE_AUTO_KEY) === '1') {
+      App.gdrive.reconnectSilent().then((ok) => { if (!ok) mostrarLogin(); });
+      return;
+    }
+    mostrarLogin();
   }
 
   function wireShellEvents() {
@@ -351,5 +453,6 @@
     state.subscribe(render);
     wireAutoSync();
     render();
+    iniciarLogin();
   });
 })();

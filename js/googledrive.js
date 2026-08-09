@@ -132,6 +132,12 @@ App.gdrive = (function () {
     return garantirToken(true).then(() => { notify(); return true; });
   }
 
+  // Tenta reconectar SEM abrir popup (reaproveita um consentimento já dado).
+  // Resolve true se conseguiu um token; false se precisaria de interação.
+  function reconnectSilent() {
+    return garantirToken(false).then(() => { notify(); return true; }).catch(() => false);
+  }
+
   function disconnect() {
     const t = accessToken;
     accessToken = null;
@@ -205,6 +211,6 @@ App.gdrive = (function () {
   return {
     getClientId, getClientIdOverride, setClientId, getLastSync,
     isConnected, onChange,
-    connect, disconnect, upload, download,
+    connect, reconnectSilent, disconnect, upload, download,
   };
 })();
