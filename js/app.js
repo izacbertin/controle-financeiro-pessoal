@@ -8,6 +8,17 @@
   const utils = App.utils;
   const state = App.state;
 
+  // Logo "G" do Google (4 cores) para o botão de login, conforme as diretrizes
+  // de marca do "Fazer login com Google". Multicolor, então é um SVG próprio
+  // (não usa o App.icons, que é monocromático com currentColor).
+  const GOOGLE_G_SVG = `
+    <svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true" focusable="false">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+    </svg>`;
+
   const NAV_ITEMS = [
     { view: 'dashboard', label: 'Painel', icon: 'grid' },
     { view: 'gastos', label: 'Gastos', icon: 'list' },
@@ -205,34 +216,31 @@
           Os dados vão direto do navegador para o seu Drive — nenhum servidor no meio.
         </p>
 
-        <label>Client ID do Google
-          <input type="text" name="gdriveClientId" placeholder="xxxxxxxx.apps.googleusercontent.com"
-                 value="${utils.escapeHtml(gdrive.getClientId())}" autocomplete="off" spellcheck="false" />
-        </label>
-        <div class="form__actions form__actions--start">
-          <button type="button" class="button button--ghost" data-g="salvar-id">Salvar Client ID</button>
-        </div>
-
-        <details class="gdrive-help">
-          <summary>Como obter o Client ID (uma vez só)</summary>
-          <ol>
-            <li>Acesse <strong>console.cloud.google.com</strong> e crie um projeto (ou use um existente).</li>
-            <li>Em <strong>APIs e serviços → Biblioteca</strong>, ative a <strong>Google Drive API</strong>.</li>
-            <li>Em <strong>Tela de consentimento OAuth</strong>, configure como "Externo" e adicione seu e-mail em usuários de teste.</li>
-            <li>Em <strong>Credenciais → Criar credenciais → ID do cliente OAuth</strong>, tipo <strong>Aplicativo da Web</strong>.</li>
-            <li>Em <strong>Origens JavaScript autorizadas</strong>, adicione: <code>${utils.escapeHtml(origem)}</code></li>
-            <li>Copie o <strong>Client ID</strong> gerado e cole no campo acima.</li>
-          </ol>
-        </details>
-
         <div data-role="gdrive-status">${statusHtml()}</div>
 
+        <button type="button" class="btn-google btn-google--full" data-g="conectar">
+          <span class="btn-google__g">${GOOGLE_G_SVG}</span>
+          <span data-role="conectar-label">Fazer login com Google</span>
+        </button>
+
         <div class="form__actions form__actions--stack">
-          <button type="button" class="button button--primary button--full button--icon" data-g="conectar">${App.icons.get('cloud')} <span data-role="conectar-label">Conectar com Google</span></button>
           <button type="button" class="button button--ghost button--full button--icon" data-g="enviar">${App.icons.get('upload')} Enviar backup para o Drive</button>
           <button type="button" class="button button--ghost button--full button--icon" data-g="baixar">${App.icons.get('download')} Baixar backup do Drive</button>
           <button type="button" class="button button--ghost button--full button--icon" data-g="desconectar">${App.icons.get('x')} Desconectar</button>
         </div>
+
+        <details class="gdrive-adv">
+          <summary>Avançado (opcional)</summary>
+          <p class="form__hint">O app já vem configurado. Só mexa aqui se quiser usar um Client ID próprio do Google.</p>
+          <label>Client ID do Google
+            <input type="text" name="gdriveClientId" placeholder="xxxxxxxx.apps.googleusercontent.com"
+                   value="${utils.escapeHtml(gdrive.getClientIdOverride())}" autocomplete="off" spellcheck="false" />
+          </label>
+          <div class="form__actions form__actions--start">
+            <button type="button" class="button button--ghost" data-g="salvar-id">Salvar Client ID</button>
+          </div>
+          <p class="form__hint">Origem a autorizar no Google Cloud: <code>${utils.escapeHtml(origem)}</code></p>
+        </details>
       </div>`;
 
     App.modal.open({
@@ -245,7 +253,7 @@
 
         function refresh() {
           statusWrap.innerHTML = statusHtml();
-          conectarLabel.textContent = gdrive.isConnected() ? 'Reconectar' : 'Conectar com Google';
+          conectarLabel.textContent = gdrive.isConnected() ? 'Reconectar' : 'Fazer login com Google';
         }
 
         dialog.addEventListener('click', (e) => {

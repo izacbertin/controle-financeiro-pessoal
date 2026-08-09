@@ -24,6 +24,12 @@ App.gdrive = (function () {
   const CLIENT_ID_KEY = 'controleFinanceiroPessoal:gdriveClientId';
   const LAST_SYNC_KEY = 'controleFinanceiroPessoal:gdriveLastSync';
 
+  // Client ID do app (identidade pública, NÃO é segredo — fica exposto no
+  // código de qualquer app web). Vem embutido pra que o usuário final só
+  // precise clicar em "Conectar com Google"; o campo de colar Client ID vira
+  // só um override "Avançado" (localStorage) para quem quiser usar outro.
+  const DEFAULT_CLIENT_ID = '162301481034-o6sj9q733cvp4dp2116qqjvb0fhh4osh.apps.googleusercontent.com';
+
   let tokenClient = null;
   let accessToken = null;
   let tokenExpira = 0;      // epoch ms
@@ -32,7 +38,12 @@ App.gdrive = (function () {
   const listeners = [];
 
   // --- config (Client ID) -------------------------------------------------
+  // Usa o override salvo (Avançado) ou, na falta dele, o embutido no app.
   function getClientId() {
+    return (localStorage.getItem(CLIENT_ID_KEY) || '').trim() || DEFAULT_CLIENT_ID;
+  }
+  // Só o override informado pelo usuário (vazio = usando o embutido).
+  function getClientIdOverride() {
     return (localStorage.getItem(CLIENT_ID_KEY) || '').trim();
   }
   function setClientId(id) {
@@ -192,7 +203,7 @@ App.gdrive = (function () {
   }
 
   return {
-    getClientId, setClientId, getLastSync,
+    getClientId, getClientIdOverride, setClientId, getLastSync,
     isConnected, onChange,
     connect, disconnect, upload, download,
   };
