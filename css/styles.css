@@ -1205,6 +1205,9 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
   margin-bottom: var(--space-4);
 }
 .filter-bar__sep { color: var(--text-muted); font-size: 13px; }
+/* Faixa de datas com rótulo (Vencimento / Pago em) — fica junta ao quebrar linha. */
+.filter-bar__range { display: inline-flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.filter-bar__label { color: var(--text-secondary); font-size: 13px; font-weight: 600; }
 
 .input {
   border: 1px solid var(--border);
@@ -1250,7 +1253,24 @@ input, select, textarea { font-family: inherit; font-size: 15px; }
 }
 .checkbox-row { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; padding: 4px 2px; cursor: pointer; }
 
-.list-summary { font-size: 13px; color: var(--text-secondary); margin-bottom: var(--space-3); }
+.list-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
+}
+/* Com filtro ativo o total ganha a cor de destaque, pra ficar claro que é parcial. */
+.list-summary--filtrado { background: var(--accent-wash); border-color: var(--accent); }
+.list-summary__total { display: flex; align-items: baseline; gap: var(--space-3); }
+.list-summary__label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.list-summary__valor { font-size: 22px; font-weight: 700; color: var(--text-primary); }
+.list-summary__detalhe { font-size: 13px; color: var(--text-secondary); }
 
 .info-banner {
   background: var(--accent-wash);

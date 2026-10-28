@@ -93,7 +93,7 @@ App.views.gastos = (function () {
     const lista = state.gastosFiltrados();
     const categorias = state.listCategorias();
     const totalFiltrado = state.totais(lista);
-    const filtrosAtivos = !!(f.mesReferencia || f.dataInicio || f.dataFim || f.categorias.length || f.tipos.length || f.status.length || f.busca);
+    const filtrosAtivos = !!(f.mesReferencia || f.dataInicio || f.dataFim || f.pagamentoInicio || f.pagamentoFim || f.categorias.length || f.tipos.length || f.status.length || f.busca);
 
     container.innerHTML = `
       <div class="view-header">
@@ -109,9 +109,19 @@ App.views.gastos = (function () {
           ${mesesDisponiveis().map((m) => `<option value="${m}" ${f.mesReferencia === m ? 'selected' : ''}>${utils.escapeHtml(utils.monthRefToLabel(m))}</option>`).join('')}
         </select>
 
-        <input type="date" class="input" data-field="dataInicio" value="${f.dataInicio}" title="Vencimento de" />
-        <span class="filter-bar__sep">até</span>
-        <input type="date" class="input" data-field="dataFim" value="${f.dataFim}" title="Vencimento até" />
+        <span class="filter-bar__range">
+          <span class="filter-bar__label">Vencimento</span>
+          <input type="date" class="input" data-field="dataInicio" value="${f.dataInicio}" title="Vencimento de" />
+          <span class="filter-bar__sep">até</span>
+          <input type="date" class="input" data-field="dataFim" value="${f.dataFim}" title="Vencimento até" />
+        </span>
+
+        <span class="filter-bar__range">
+          <span class="filter-bar__label">Pago em</span>
+          <input type="date" class="input" data-field="pagamentoInicio" value="${f.pagamentoInicio}" title="Data de pagamento de" />
+          <span class="filter-bar__sep">até</span>
+          <input type="date" class="input" data-field="pagamentoFim" value="${f.pagamentoFim}" title="Data de pagamento até" />
+        </span>
 
         <details class="filter-dropdown">
           <summary class="button button--ghost button--icon">${App.icons.get('funnel')} Categoria ${f.categorias.length ? `(${f.categorias.length})` : ''}</summary>
@@ -137,9 +147,15 @@ App.views.gastos = (function () {
         ${filtrosAtivos ? '<button type="button" class="button button--ghost" data-action="limpar-filtros">Limpar filtros</button>' : ''}
       </div>
 
-      <div class="list-summary">
-        ${lista.length} gasto${lista.length === 1 ? '' : 's'} · Total ${utils.formatCurrency(totalFiltrado.totalLiquido)} ·
-        Pago ${utils.formatCurrency(totalFiltrado.totalPago)} · Pendente ${utils.formatCurrency(totalFiltrado.totalPendente)}
+      <div class="list-summary${filtrosAtivos ? ' list-summary--filtrado' : ''}">
+        <div class="list-summary__total">
+          <span class="list-summary__label">${filtrosAtivos ? 'Total filtrado' : 'Total de gastos'}</span>
+          <span class="list-summary__valor valor-mono">${utils.formatCurrency(totalFiltrado.totalLiquido)}</span>
+        </div>
+        <div class="list-summary__detalhe">
+          ${lista.length} gasto${lista.length === 1 ? '' : 's'} ·
+          Pago ${utils.formatCurrency(totalFiltrado.totalPago)} · Pendente ${utils.formatCurrency(totalFiltrado.totalPendente)}
+        </div>
       </div>
 
       ${renderLista(lista)}

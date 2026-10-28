@@ -20,7 +20,9 @@ App.state = (function () {
     mesReferencia: '',      // '' = todos os meses
     dataInicio: '',
     dataFim: '',
-    categorias: [],         // ids selecionados (vazio = todas)
+    pagamentoInicio: '',    // faixa de data de pagamento (só gastos pagos)
+    pagamentoFim: '',
+    categorias: [],        // ids selecionados (vazio = todas)
     tipos: [],              // 'fixo' | 'variavel'
     status: [],             // 'pago' | 'pendente' | 'atrasado'
     busca: '',
@@ -405,12 +407,29 @@ App.state = (function () {
     return gasto.status;
   }
 
+  // Data em que o gasto foi pago ('' se ainda não foi). Gasto de cartão usa a
+  // data de pagamento da própria fatura.
+  function dataPagamentoEfetiva(gasto) {
+    if (gasto.cartao) {
+      const fatura = getFatura(gasto.cartao, gasto.mesReferencia);
+      return fatura.pago ? (fatura.dataPagamento || '') : '';
+    }
+    return gasto.status === 'pago' ? (gasto.dataPagamento || '') : '';
+  }
+
   function aplicarFiltros(lista, f) {
     const busca = (f.busca || '').trim().toLowerCase();
     return lista.filter((g) => {
       if (f.mesReferencia && g.mesReferencia !== f.mesReferencia) return false;
       if (f.dataInicio && g.vencimento < f.dataInicio) return false;
       if (f.dataFim && g.vencimento > f.dataFim) return false;
+      if (f.pagamentoInicio || f.pagamentoFim) {
+        // Filtrar por data de pagamento deixa de fora o que não foi pago.
+        const pago = dataPagamentoEfetiva(g);
+        if (!pago) return false;
+        if (f.pagamentoInicio && pago < f.pagamentoInicio) return false;
+        if (f.pagamentoFim && pago > f.pagamentoFim) return false;
+      }
       if (f.categorias.length && !f.categorias.includes(g.categoriaId)) return false;
       if (f.tipos.length && !f.tipos.includes(g.tipo)) return false;
       if (f.status.length && !f.status.includes(statusEfetivo(g))) return false;
@@ -807,7 +826,7 @@ App.state = (function () {
     addReceita, updateReceita, deleteReceita, receitaDoMes,
     addNotaFiscal, updateNotaFiscal, deleteNotaFiscal,
     getOrcamentos, setOrcamento, setOrcamentosEmLote, orcamentoStatusDoMes,
-    getFiltros, setFiltro, limparFiltros, statusEfetivo, gastosFiltrados,
+    getFiltros, setFiltro, limparFiltros, statusEfetivo, dataPagamentoEfetiva, gastosFiltrados,
     valorLiquido, gastosDoMes, gastosDoAno, totais, gastosPorCategoria,
     comparativoFixoVariavel, compromissosAtrasados, compromissosProximos,
     resumoMensal, resumoAnual, variacaoMesAnterior, mediaDespesasMesesAnteriores, evolucaoMensal,
